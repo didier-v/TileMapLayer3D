@@ -245,6 +245,12 @@ func sync_from_settings(tilemap_settings: TileMapLayerSettings) -> void:
 			smart_select_group.visible = true
 			auto_tile_mode_group.visible = false
 			self.visible = true
+		GlobalConstants.MainAppMode.ANIMATED_TILES:
+			manual_mode_group.visible = false
+			smart_select_group.visible = false
+			auto_tile_mode_group.visible = false
+			#TODO: Add new groups for animated tile settings when that mode is implemented
+			self.visible = true
 		GlobalConstants.MainAppMode.SETTINGS:
 			self.visible = false
 		_:

@@ -110,6 +110,18 @@ button_group = SubResource("ButtonGroup_wg4s3")
 icon = SubResource("DPITexture_po32j")
 icon_alignment = 1
 
+[node name="AnimatedTilesButton" type="Button" parent="." unique_id=1082731283]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_horizontal = 4
+tooltip_text = "SETTINGS: Switch to settings tab"
+theme_override_font_sizes/font_size = 10
+toggle_mode = true
+button_group = SubResource("ButtonGroup_wg4s3")
+text = "AT"
+icon_alignment = 1
+
 [node name="SettingsButton" type="Button" parent="." unique_id=112521672]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(36, 36)

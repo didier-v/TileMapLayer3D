@@ -33,9 +33,10 @@ signal main_toolbar_mode_changed(mode: int, is_smart_select: bool)
 @onready var smart_select_button: Button = %SmartSelectButton
 ## Auto mode button
 @onready var auto_tile_button: Button = %AutoTileButton
+## Animated tiles button 
+@onready var animated_tiles_button: Button = %AnimatedTilesButton
 ## Settings button
 @onready var settings_button: Button = %SettingsButton
-
 ## Flag to prevent signal loops during programmatic updates
 var _updating_ui: bool = false
 
@@ -53,12 +54,14 @@ func prepare_ui_components() -> void:
 	smart_select_button.toggled.connect(_on_smartselect_button_toggled)
 	auto_tile_button.toggled.connect(_on_auto_button_toggled)
 	settings_button.toggled.connect(_on_settings_button_toggled)
+	animated_tiles_button.toggled.connect(_on_animated_tiles_button_toggled)
 
 
 	GlobalUtil.apply_button_theme(manual_tile_button, "BitMap", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
 	GlobalUtil.apply_button_theme(auto_tile_button, "TileSet", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
 	GlobalUtil.apply_button_theme(smart_select_button, "EditPivot", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
 	GlobalUtil.apply_button_theme(settings_button, "Tools", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
+	GlobalUtil.apply_button_theme(animated_tiles_button, "AT", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
 
 
 ## Sync UI state from node settings
@@ -79,6 +82,8 @@ func sync_from_settings(tilemap_settings: TileMapLayerSettings) -> void:
 			auto_tile_button.button_pressed = true
 		GlobalConstants.MainAppMode.MANUAL_SMART_SELECT:
 			smart_select_button.button_pressed = true
+		GlobalConstants.MainAppMode.ANIMATED_TILES:
+			animated_tiles_button.button_pressed = true
 		GlobalConstants.MainAppMode.SETTINGS:
 			settings_button.button_pressed = true
 		_:
@@ -150,6 +155,14 @@ func _on_auto_button_toggled(pressed: bool) -> void:
 		return
 	if pressed:
 		main_toolbar_mode_changed.emit(GlobalConstants.MainAppMode.AUTOTILE, false)
+
+func _on_animated_tiles_button_toggled(pressed: bool) -> void:
+	if _updating_ui:
+		return
+	if pressed:
+		print("Animated Tiles button toggled: " + str(pressed))
+		main_toolbar_mode_changed.emit(GlobalConstants.MainAppMode.ANIMATED_TILES, false)
+
 
 func _on_settings_button_toggled(pressed: bool) -> void:
 	if _updating_ui:

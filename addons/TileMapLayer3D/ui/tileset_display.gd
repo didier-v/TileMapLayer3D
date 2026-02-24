@@ -180,7 +180,7 @@ func _finalize_tile_selection() -> void:
 	tileset_panel._save_ui_to_settings()
 
 	# CRITICAL: Emit signals for SelectionManager and downstream systems
-	tileset_panel._emit_selection_signals()
+	tileset_panel._emit_tileset_selection_signals()
 
 	# CRITICAL: Release focus to return input to 3D viewport (WASD navigation)
 	if has_focus():

@@ -729,7 +729,8 @@ enum MainAppMode {
 	MANUAL = 0,
 	AUTOTILE = 1,
 	SETTINGS = 2,
-	MANUAL_SMART_SELECT = 3
+	MANUAL_SMART_SELECT = 3,
+	ANIMATED_TILES = 4
 }
 
 ## TileSet Tabs enum - determines which TileSet configuration tab is active for TileModes

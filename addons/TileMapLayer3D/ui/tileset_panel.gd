@@ -59,6 +59,9 @@ extends PanelContainer
 @onready var remove_terrain_button: Button = %RemoveTerrainButton
 @onready var terrain_name_input: LineEdit = %TerrainNameInput
 
+@onready var manual_mode_ui: VBoxContainer = %ManualModeUI
+@onready var manual_tab_common_ui: VBoxContainer = %ManualTabCommonUI
+@onready var animated_tile_manager: AnimatedTileManager = %AnimatedTileManager
 
 # Emitted when user selects a single tile
 signal tile_selected(uv_rect: Rect2)
@@ -129,14 +132,15 @@ var _previous_texture: Texture2D = null  # For detecting texture changes
 
 var _current_tiling_mode: GlobalConstants.MainAppMode = GlobalConstants.MainAppMode.MANUAL  # Default to MANUAL, can be changed by UI or node settings
 
-# Tile selection state
-var _selected_tiles: Array[Rect2] = []  # Multiple UV rects for multi-selection (managed by TilesetDisplay)
+# Multiple UV rects for multi-selection (managed by TilesetDisplay)
+var _selected_tiles: Array[Rect2] = []
 
 func _ready() -> void:
 	_connect_signals()
 	manual_tiling_tab.show()
 	set_tiling_mode_from_external(GlobalConstants.MainAppMode.MANUAL)
 	set_ui_theme_scale()
+	initialize_animated_tile_manager()
 
 func set_ui_theme_scale() -> void:
 	var ui_scale: float = GlobalUtil.get_editor_ui_scale()
@@ -362,6 +366,8 @@ func set_active_node(node: TileMapLayer3D) -> void:
 			current_node.settings.changed.disconnect(_on_node_settings_changed)
 
 	current_node = node
+	initialize_animated_tile_manager()
+	# animated_tile_manager.current_node = node  # Pass reference to AnimatedTileManager
 
 	# Connect to new node's settings and load them
 	if current_node and current_node.settings:
@@ -493,7 +499,14 @@ func _load_settings_to_ui(settings: TileMapLayerSettings) -> void:
 	grid_snap_size_changed.emit(settings.grid_snap_size)
 	grid_size_changed.emit(settings.grid_size)
 
-
+func initialize_animated_tile_manager() -> void:
+	if animated_tile_manager:
+		print("Initializing AnimatedTileManager: animated_tile_manager called")
+		if current_node:
+			print("Initializing AnimatedTileManager: current TileMapLayerNode is: ", current_node.name)
+			animated_tile_manager.current_node = current_node
+			animated_tile_manager.load_animated_tile_settings()
+		
 
 	# print("TilesetPanel: Loaded settings from node and updated cursor/placement")
 
@@ -654,7 +667,7 @@ func _on_tile_size_changed(value: float) -> void:
 
 ## Called by TilesetDisplay after selection finalized
 ## Emits appropriate signals for SelectionManager and downstream systems
-func _emit_selection_signals() -> void:
+func _emit_tileset_selection_signals() -> void:
 	if _selected_tiles.size() == 0:
 		return
 	elif _selected_tiles.size() == 1:
@@ -663,6 +676,12 @@ func _emit_selection_signals() -> void:
 	else:
 		# Multi-tile selection (anchor_index = 0 for top-left)
 		multi_tile_selected.emit(_selected_tiles, 0)
+	
+	if animated_tile_manager:
+		#Always update the AnimatedTileManager to sync selection
+		animated_tile_manager.on_tileset_selection_changed(_selected_tiles, _tile_size) 
+
+
 
 
 func _on_tile_uvmode_selected(index: int) -> void:
@@ -894,12 +913,22 @@ func set_tiling_mode_from_external(new_mode: GlobalConstants.MainAppMode) -> voi
 	# Determine target tab index
 	var target_tab: int = GlobalConstants.TilSetTab.MANUAL
 	match new_mode:
+		GlobalConstants.TilSetTab.MANUAL:
+			target_tab = GlobalConstants.TilSetTab.MANUAL
+			#TODO: Create method to ENABLE/DISABLE Manual TILES UI Controls in TileSetPanel. Use one METHOD with a BOOL Parameter 
+			manual_mode_ui.visible = true
+			animated_tile_manager.visible = false
 		GlobalConstants.MainAppMode.AUTOTILE:
 			target_tab = GlobalConstants.TilSetTab.AUTOTILE
 		GlobalConstants.MainAppMode.SETTINGS:
 			target_tab = GlobalConstants.TilSetTab.SETTINGS
 		GlobalConstants.MainAppMode.MANUAL_SMART_SELECT:
 			target_tab = GlobalConstants.TilSetTab.MANUAL
+		GlobalConstants.MainAppMode.ANIMATED_TILES:
+			target_tab = GlobalConstants.TilSetTab.MANUAL
+			#TODO: Create method to ENABLE/DISABLE Animated TILES UI Controls in TileSetPanel. Use one METHOD with a BOOL Parameter that I can call here and WHEN MODDE is MANUAL.
+			manual_mode_ui.visible = false
+			animated_tile_manager.visible = true
 
 	# Unhide target FIRST to avoid "Cannot deselect tabs" error,
 	# then set current, then hide the rest
@@ -908,6 +937,8 @@ func set_tiling_mode_from_external(new_mode: GlobalConstants.MainAppMode) -> voi
 	for i: int in range(_tab_container.get_tab_count()):
 		if i != target_tab:
 			_tab_container.set_tab_hidden(i, true)
+
+
 
 ## Handle TileSet changes from AutotileTab
 func _on_autotile_tileset_changed(tileset: TileSet) -> void:

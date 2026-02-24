@@ -1055,6 +1055,7 @@ func _on_tool_toggled(pressed: bool) -> void:
 	is_active = pressed
 	#print("Tool active: ", is_active)
 
+#TODO: Check if we can unify _on_tile_selected with _on_multi_tile_selected and avoid having two flows for SINGLE and MULTI TILE SELECTION
 func _on_tile_selected(uv_rect: Rect2) -> void:
 	# Single tile selected - route through SelectionManager
 	if selection_manager:
