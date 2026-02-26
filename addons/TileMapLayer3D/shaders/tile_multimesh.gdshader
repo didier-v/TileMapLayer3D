@@ -6,9 +6,11 @@ uniform bool use_nearest_texture = true;
 uniform sampler2D albedo_texture_nearest : source_color, filter_nearest, repeat_disable;
 uniform sampler2D albedo_texture_linear : source_color, filter_linear, repeat_disable;
 uniform bool debug_show_backfaces = true;
+uniform float inset_percentage = 0.01; // 1% inset based on tile UV size, prevents bleeding for various atlas/tile sizes
 
 varying flat vec4 uv_rect_data;
 varying flat vec4 anim_data;
+
 
 void vertex() {
     uv_rect_data = INSTANCE_CUSTOM;
@@ -42,19 +44,22 @@ void fragment() {
     vec2 flipped_uv = vec2(UV.x, 1.0 - UV.y);
     vec2 remapped_uv = mix(uv_min, uv_max, flipped_uv);
 
-    // Atlas-bleed prevention: clamp UVs to valid texel range
-    vec2 tex_size = vec2(textureSize(albedo_texture_nearest, 0));
-    vec2 inset = 0.5 / tex_size;
-    if (anim_total > 1.0) {
-        // Animated frames need tighter clamping to prevent mipmap bleed across frame boundaries
-        inset = 1.0 / tex_size;
+    // Atlas-bleed prevention: inset UVs to prevent sampling across tile boundaries
+    vec2 final_uv;
+    if (use_nearest_texture) {
+        // Nearest: no interpolation, no bleed possible — no inset needed
+        final_uv = remapped_uv;
+    } else {
+        // Linear: bilinear interpolation can sample across tile boundaries — inset needed
+        vec2 tile_uv_size = uv_max - uv_min;
+        vec2 inset = tile_uv_size * inset_percentage;
+        final_uv = clamp(remapped_uv, uv_min + inset, uv_max - inset);
     }
-    vec2 final_uv = clamp(remapped_uv, uv_min + inset, uv_max - inset);
 
-    // Sample texture with correct filter mode
+    // Sample texture with correct filter mode (nearest or linear)
+    // Animated tiles: force mip level 0 to prevent cross-frame mipmap bleeding
     vec4 tex_color;
     if (anim_total > 1.0) {
-        // Animated: force mip 0 to prevent cross-frame mipmap bleeding
         tex_color = use_nearest_texture
             ? textureLod(albedo_texture_nearest, final_uv, 0.0)
             : textureLod(albedo_texture_linear, final_uv, 0.0);
