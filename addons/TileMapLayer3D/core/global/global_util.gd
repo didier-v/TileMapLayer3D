@@ -78,10 +78,11 @@ static func create_tile_material(texture: Texture2D, filter_mode: int = 0, rende
 
 	# Set texture and filter mode parameters
 	if texture:
-		material.set_shader_parameter("albedo_texture", texture)
+		material.set_shader_parameter("albedo_texture_nearest", texture)
+		material.set_shader_parameter("albedo_texture_linear", texture)
 		material.set_shader_parameter("debug_show_backfaces", debug_show_red_backfaces)
 
-		# 0-1 = Nearest (manual UV snap in shader), 2-3 = Linear (hardware bilinear)
+		# 0-1 = Nearest (hardware filter_nearest sampler), 2-3 = Linear (hardware filter_linear sampler)
 		var use_nearest: bool = (filter_mode == 0 or filter_mode == 1)
 		material.set_shader_parameter("use_nearest_texture", use_nearest)
 

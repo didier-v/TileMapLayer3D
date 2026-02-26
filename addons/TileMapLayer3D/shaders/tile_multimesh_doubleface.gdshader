@@ -4,8 +4,8 @@ render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_toon, specular_
 uniform vec4 albedo_color : source_color = vec4(1.0);
 uniform float alpha_threshold = 0.5;
 uniform bool use_nearest_texture = true;
-uniform sampler2D albedo_texture : source_color, filter_linear, repeat_disable;
-uniform bool debug_show_backfaces = true;
+uniform sampler2D albedo_texture_nearest : source_color, filter_nearest, repeat_disable;
+uniform sampler2D albedo_texture_linear : source_color, filter_linear, repeat_disable;
 
 varying flat vec4 uv_rect_data;
 varying flat vec4 anim_data;
@@ -27,11 +27,15 @@ void fragment() {
 	float anim_speed = anim_data.a;
 
 	if (anim_speed > 0.0 && anim_total > 1.0) {
-		float frame_index = floor(mod(TIME * anim_speed, anim_total) + 0.001);
-		float col = mod(frame_index, anim_cols);
-		float row = floor(frame_index / anim_cols);
+		// Recover integer values degraded by float16 compression (WebGL 2 / Compatibility renderer)
+		float cols = round(anim_cols);
+		float rows = round(anim_rows);
+		float total = round(anim_total);
+		float frame_index = floor(mod(TIME * anim_speed, total) + 0.001);
+		float col = mod(frame_index, cols);
+		float row = floor(frame_index / cols);
 		vec2 full_size = uv_max - uv_min;
-		vec2 frame_size = vec2(full_size.x / anim_cols, full_size.y / anim_rows);
+		vec2 frame_size = vec2(full_size.x / cols, full_size.y / rows);
 		uv_min = uv_min + vec2(col * frame_size.x, row * frame_size.y);
 		uv_max = uv_min + frame_size;
 	}
@@ -39,65 +43,34 @@ void fragment() {
 	vec2 flipped_uv = vec2(UV.x, 1.0 - UV.y);
 	vec2 remapped_uv = mix(uv_min, uv_max, flipped_uv);
 
-	// Manual nearest-neighbor: snap to texel center for pixel-perfect filtering
-	// // At exact texel center, bilinear filter returns the exact texel value
-	// vec2 final_uv = remapped_uv;
-	// if (use_nearest_texture) {
-	// 	vec2 tex_size = vec2(textureSize(albedo_texture, 0));
-	// 	final_uv = (floor(remapped_uv * tex_size) + 0.5) / tex_size;
-	// }
-	// // if (use_nearest_texture) {
-	// // 	vec2 tex_size = vec2(textureSize(albedo_texture, 0));
-	// // 	vec2 half_texel = 0.5 / tex_size;
-	// // 	// Clamp to tile's valid texel range to prevent sampling neighboring atlas tiles
-	// // 	vec2 clamped_uv = clamp(remapped_uv, uv_min + half_texel, uv_max - half_texel);
-	// // 	final_uv = (floor(clamped_uv * tex_size) + 0.5) / tex_size;
-	// // }
-
-	// Compute texel dimensions for atlas-bleed prevention
-	vec2 tex_size = vec2(textureSize(albedo_texture, 0));
-	vec2 half_texel = 0.5 / tex_size;
-
+	// Atlas-bleed prevention: clamp UVs to valid texel range
+	// Use either sampler for textureSize — both are the same texture
+	vec2 tex_size = vec2(textureSize(albedo_texture_nearest, 0));
+	vec2 inset = 0.5 / tex_size;
 	// Animated frames need tighter clamping to prevent mipmap bleed across frame boundaries
-	// Static tiles: half_texel is sufficient (adjacent UV regions are other tiles with content)
-	// Animated tiles: adjacent UV regions are OTHER FRAMES — mipmap blending crosses boundaries
-	vec2 inset = half_texel;
 	if (anim_speed > 0.0 && anim_total > 1.0) {
 		inset = 1.0 / tex_size;
 	}
+	vec2 final_uv = clamp(remapped_uv, uv_min + inset, uv_max - inset);
 
-	// Clamp to tile's valid texel range (prevents atlas bleed in BOTH filter modes)
-	// Applied AFTER mix() so only edge pixels are affected — interior pixels untouched
-	vec2 clamped_uv = clamp(remapped_uv, uv_min + inset, uv_max - inset);
-
-	vec2 final_uv = clamped_uv;
-	if (use_nearest_texture) {
-		// Manual nearest-neighbor: snap to texel center
-		final_uv = (floor(clamped_uv * tex_size) + 0.5) / tex_size;
-	}
-
-
-
-	// Force mip level 0 for animated tiles to prevent cross-frame mipmap bleeding
-	// (mipmaps blend texels across frame boundaries in the atlas, causing alpha flicker)
+	// Sample texture with correct filter mode (nearest or linear)
 	vec4 tex_color;
 	if (anim_speed > 0.0 && anim_total > 1.0) {
-		tex_color = textureLod(albedo_texture, final_uv, 0.0);
+		// Animated: force mip level 0 to prevent cross-frame mipmap bleeding
+		tex_color = use_nearest_texture
+			? textureLod(albedo_texture_nearest, final_uv, 0.0)
+			: textureLod(albedo_texture_linear, final_uv, 0.0);
 	} else {
-		tex_color = texture(albedo_texture, final_uv);
+		tex_color = use_nearest_texture
+			? texture(albedo_texture_nearest, final_uv)
+			: texture(albedo_texture_linear, final_uv);
 	}
 
-	//   discard must happen BEFORE any other assignments
+	// discard must happen BEFORE any other assignments
 	if (tex_color.a < alpha_threshold) {
 		discard;  // ← This is what makes shadows work!
 	}
-	//Always renders both faces without backface debug (as we use cull_disabled)
-	ALBEDO = albedo_color.rgb * tex_color.rgb;
 
-	//if (debug_show_backfaces && !FRONT_FACING) {
-		//ALBEDO = vec3(1.0, 0.0, 0.0);
-//
-	//} else {
-		//ALBEDO = albedo_color.rgb * tex_color.rgb;
-	//}
+	// Always renders both faces without backface debug (cull_disabled)
+	ALBEDO = albedo_color.rgb * tex_color.rgb;
 }
