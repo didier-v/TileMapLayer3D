@@ -12,9 +12,11 @@ class_name AnimatedTileManager
 @onready var delete_anim_tile_button: Button = %DeleteAnimTileButton
 @onready var anim_tile_items_list: ItemList = %AnimTileItemsList
 
+## Emitted when user selects an AnimTile record, carrying the frame 0 tiles to auto-select
+signal anim_tile_frame0_selected(tiles: Array[Rect2])
+
 var selected_tiles: Array[Rect2] = []
 var base_tile_size: Vector2 = Vector2.ZERO
-
 
 var current_node: TileMapLayer3D = null  # Reference passed by TileSetPanel
 
@@ -99,6 +101,11 @@ func _on_anim_tile_selected(selected_item_index: int) -> void:
 		anim_tile_frames.value = anim_data.frames
 		anim_tile_speed.value = anim_data.speed
 		print("Loaded tile data: ", anim_data.display_name, " with UVs: ", anim_data.selection_uv_rects)
+
+		# Auto-select frame 0 tiles in the tileset display (Signal Up pattern)
+		var frame0_tiles: Array[Rect2] = GlobalUtil.get_anim_frame0_tiles(anim_data)
+		if not frame0_tiles.is_empty():
+			anim_tile_frame0_selected.emit(frame0_tiles)
 	
 
 func _on_create_anim_tile_btn_pressed() -> void:

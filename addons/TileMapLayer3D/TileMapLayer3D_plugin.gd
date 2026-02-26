@@ -969,7 +969,44 @@ func _paint_tile_at_mouse(camera: Camera3D, screen_pos: Vector2, is_erase: bool)
 			_autotile_extension.on_tile_erased(grid_pos, orientation, terrain_id)
 	else:
 		# PAINT MODE: Place tile(s)
-		if _has_multi_tile_selection():
+		if _is_animated_tile_mode():
+			# ANIMATED TILE MODE: Set animation metadata, then use normal placement flow.
+			# Frame 0 tiles are already in SelectionManager/PlacementManager via auto-selection
+			# (triggered by AnimatedTileManager.anim_tile_frame0_selected signal).
+			var anim_id: int = current_tile_map3d.settings.active_animated_tile
+			if anim_id >= 0 and current_tile_map3d.settings.animate_tiles_list.has(anim_id):
+				var anim: TileAnimData = current_tile_map3d.settings.animate_tiles_list[anim_id]
+				if not anim.selection_uv_rects.is_empty():
+					var atlas_size: Vector2 = placement_manager.tileset_texture.get_size()
+					var info: Dictionary = GlobalUtil.compute_anim_frame_info(anim, atlas_size)
+					if info.is_empty():
+						return
+
+					# Set animation params (picked up by _create_tile_info)
+					placement_manager.current_anim_step_x = info["anim_step_x"]
+					placement_manager.current_anim_step_y = info["anim_step_y"]
+					placement_manager.current_anim_total_frames = anim.frames
+					placement_manager.current_anim_columns = anim.columns
+					placement_manager.current_anim_speed_fps = anim.speed
+
+					# Force FLAT_SQUARE for animated tiles
+					var orig_mesh_mode: GlobalConstants.MeshMode = current_tile_map3d.current_mesh_mode
+					current_tile_map3d.current_mesh_mode = GlobalConstants.MeshMode.FLAT_SQUARE
+
+					# Use normal placement flow — tiles already in PlacementManager via selection pipeline
+					if placement_manager.multi_tile_selection.size() > 1:
+						placement_manager.paint_multi_tiles_at(grid_pos, orientation)
+					else:
+						placement_manager.paint_tile_at(grid_pos, orientation)
+
+					# Restore state
+					current_tile_map3d.current_mesh_mode = orig_mesh_mode
+					placement_manager.current_anim_step_x = 0.0
+					placement_manager.current_anim_step_y = 0.0
+					placement_manager.current_anim_total_frames = 1
+					placement_manager.current_anim_columns = 1
+					placement_manager.current_anim_speed_fps = 0.0
+		elif _has_multi_tile_selection():
 			# Multi-tile stamp painting (manual mode only)
 			placement_manager.paint_multi_tiles_at(grid_pos, orientation)
 		elif _is_autotile_mode() and _autotile_extension and _autotile_extension.is_ready():
@@ -993,52 +1030,6 @@ func _paint_tile_at_mouse(camera: Camera3D, screen_pos: Vector2, is_erase: bool)
 
 				# Update neighbors and set terrain_id on placed tile
 				_autotile_extension.on_tile_placed(grid_pos, orientation)
-		elif _is_animated_tile_mode():
-			# ANIMATED TILE MODE: Paint using selected preset (FLAT_SQUARE only)
-			var anim_id: int = current_tile_map3d.settings.active_animated_tile
-			if anim_id >= 0 and current_tile_map3d.settings.animate_tiles_list.has(anim_id):
-				var anim: TileAnimData = current_tile_map3d.settings.animate_tiles_list[anim_id]
-				if not anim.selection_uv_rects.is_empty():
-					# Compute bounding box of ALL selected tiles (the actual spritesheet strip)
-					var first: Rect2 = anim.selection_uv_rects[0]
-					var min_pos: Vector2 = first.position
-					var max_end: Vector2 = first.position + first.size
-					for rect: Rect2 in anim.selection_uv_rects:
-						min_pos.x = minf(min_pos.x, rect.position.x)
-						min_pos.y = minf(min_pos.y, rect.position.y)
-						max_end.x = maxf(max_end.x, rect.position.x + rect.size.x)
-						max_end.y = maxf(max_end.y, rect.position.y + rect.size.y)
-					var strip_uv: Rect2 = Rect2(min_pos, max_end - min_pos)
-
-					# Compute how many grid cells one animation frame spans
-					var frame_pixel_w: float = strip_uv.size.x / anim.columns
-					var frame_pixel_h: float = strip_uv.size.y / anim.rows
-					var frame_tiles_x: float = frame_pixel_w / anim.base_tile_size.x
-					var frame_tiles_y: float = frame_pixel_h / anim.base_tile_size.y
-
-					# Save original state
-					var orig_uv: Rect2 = placement_manager.current_tile_uv
-					var orig_mesh_mode: GlobalConstants.MeshMode = current_tile_map3d.current_mesh_mode
-
-					# Temp-set: UV + mesh mode + animation params + frame scale
-					placement_manager.current_tile_uv = strip_uv
-					current_tile_map3d.current_mesh_mode = GlobalConstants.MeshMode.FLAT_SQUARE
-					placement_manager.current_anim_columns = anim.columns
-					placement_manager.current_anim_rows = anim.rows
-					placement_manager.current_anim_total_frames = anim.frames
-					placement_manager.current_anim_speed_fps = anim.speed
-					placement_manager.current_anim_frame_scale = Vector2(frame_tiles_x, frame_tiles_y)
-
-					placement_manager.paint_tile_at(grid_pos, orientation)
-
-					# Restore all state
-					placement_manager.current_tile_uv = orig_uv
-					current_tile_map3d.current_mesh_mode = orig_mesh_mode
-					placement_manager.current_anim_columns = 1
-					placement_manager.current_anim_rows = 1
-					placement_manager.current_anim_total_frames = 1
-					placement_manager.current_anim_speed_fps = 0.0
-					placement_manager.current_anim_frame_scale = Vector2.ONE
 		else:
 			# Single tile painting (manual mode)
 			placement_manager.paint_tile_at(grid_pos, orientation)

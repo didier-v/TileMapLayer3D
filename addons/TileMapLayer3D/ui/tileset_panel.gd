@@ -366,16 +366,18 @@ func set_active_node(node: TileMapLayer3D) -> void:
 			current_node.settings.changed.disconnect(_on_node_settings_changed)
 
 	current_node = node
-	initialize_animated_tile_manager()
-	# animated_tile_manager.current_node = node  # Pass reference to AnimatedTileManager
 
-	# Connect to new node's settings and load them
+	# Load settings FIRST so current_texture and _tile_size are available
+	# before animated tile manager emits frame 0 selection signals
 	if current_node and current_node.settings:
 		if not current_node.settings.changed.is_connected(_on_node_settings_changed):
 			current_node.settings.changed.connect(_on_node_settings_changed)
 		_load_settings_to_ui(current_node.settings)
 	else:
 		_clear_ui()
+
+	# Initialize animated tiles AFTER settings are loaded (texture + tile_size ready)
+	initialize_animated_tile_manager()
 
 	#print("TilesetPanel: Active node set to ", node.name if node else "null")
 
@@ -506,6 +508,10 @@ func initialize_animated_tile_manager() -> void:
 			print("Initializing AnimatedTileManager: current TileMapLayerNode is: ", current_node.name)
 			animated_tile_manager.current_node = current_node
 			animated_tile_manager.load_animated_tile_settings()
+
+		# Connect frame 0 auto-selection signal (Signal Up: child emits, parent listens)
+		if not animated_tile_manager.anim_tile_frame0_selected.is_connected(select_tiles_programmatically):
+			animated_tile_manager.anim_tile_frame0_selected.connect(select_tiles_programmatically)
 		
 
 	# print("TilesetPanel: Loaded settings from node and updated cursor/placement")
@@ -679,9 +685,29 @@ func _emit_tileset_selection_signals() -> void:
 	
 	if animated_tile_manager:
 		#Always update the AnimatedTileManager to sync selection
-		animated_tile_manager.on_tileset_selection_changed(_selected_tiles, _tile_size) 
+		animated_tile_manager.on_tileset_selection_changed(_selected_tiles, _tile_size)
 
 
+## Programmatically set tile selection (used by AnimatedTileManager to show frame 0 tiles).
+## Updates local state + visual display, then emits signals to SelectionManager → PlacementManager.
+## Does NOT write to settings — avoids triggering settings.changed during initialization
+## (which can cascade into _load_settings_to_ui and wipe texture references).
+func select_tiles_programmatically(tiles: Array[Rect2]) -> void:
+	_selected_tiles = tiles.duplicate()
+	has_selection = tiles.size() > 0
+
+	if has_selection and _tile_size.x > 0 and _tile_size.y > 0:
+		selected_tile_coords = Vector2i(
+			int(_selected_tiles[0].position.x / _tile_size.x),
+			int(_selected_tiles[0].position.y / _tile_size.y)
+		)
+
+	# Visual feedback — highlight selected tiles in tileset display
+	if tileset_display:
+		tileset_display.queue_redraw()
+
+	# Propagate through normal signal chain → SelectionManager → PlacementManager
+	_emit_tileset_selection_signals()
 
 
 func _on_tile_uvmode_selected(index: int) -> void:

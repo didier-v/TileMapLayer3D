@@ -19,25 +19,24 @@ void fragment() {
 	vec2 uv_min = uv_rect_data.rg;
 	vec2 uv_max = uv_rect_data.ba;
 
-	// Animation: subdivide spritesheet region into current frame
+	// Animation data packed as (frame_step_x, frame_step_y, total_frames, cols + speed/256)
 	// Static tiles: default COLOR=(1,1,1,1), guard 1.0 > 1.0 = false → skipped
-	float anim_cols = anim_data.r;
-	float anim_rows = anim_data.g;
+	float frame_step_x = anim_data.r;
+	float frame_step_y = anim_data.g;
 	float anim_total = anim_data.b;
-	float anim_speed = anim_data.a;
+	float cols_and_speed = anim_data.a;
 
-	if (anim_speed > 0.0 && anim_total > 1.0) {
-		// Recover integer values degraded by float16 compression (WebGL 2 / Compatibility renderer)
-		float cols = round(anim_cols);
-		float rows = round(anim_rows);
+	if (anim_total > 1.0) {
 		float total = round(anim_total);
-		float frame_index = floor(mod(TIME * anim_speed, total) + 0.001);
+		float cols = floor(cols_and_speed);
+		float speed = fract(cols_and_speed) * 256.0;
+		float frame_index = floor(mod(TIME * speed, total) + 0.001);
 		float col = mod(frame_index, cols);
 		float row = floor(frame_index / cols);
-		vec2 full_size = uv_max - uv_min;
-		vec2 frame_size = vec2(full_size.x / cols, full_size.y / rows);
-		uv_min = uv_min + vec2(col * frame_size.x, row * frame_size.y);
-		uv_max = uv_min + frame_size;
+		// Offset tile's base UV to the current animation frame
+		vec2 offset = vec2(col * frame_step_x, row * frame_step_y);
+		uv_min += offset;
+		uv_max += offset;
 	}
 
 	vec2 flipped_uv = vec2(UV.x, 1.0 - UV.y);
@@ -47,15 +46,15 @@ void fragment() {
 	// Use either sampler for textureSize — both are the same texture
 	vec2 tex_size = vec2(textureSize(albedo_texture_nearest, 0));
 	vec2 inset = 0.5 / tex_size;
-	// Animated frames need tighter clamping to prevent mipmap bleed across frame boundaries
-	if (anim_speed > 0.0 && anim_total > 1.0) {
+	if (anim_total > 1.0) {
+		// Animated frames need tighter clamping to prevent mipmap bleed across frame boundaries
 		inset = 1.0 / tex_size;
 	}
 	vec2 final_uv = clamp(remapped_uv, uv_min + inset, uv_max - inset);
 
 	// Sample texture with correct filter mode (nearest or linear)
 	vec4 tex_color;
-	if (anim_speed > 0.0 && anim_total > 1.0) {
+	if (anim_total > 1.0) {
 		// Animated: force mip level 0 to prevent cross-frame mipmap bleeding
 		tex_color = use_nearest_texture
 			? textureLod(albedo_texture_nearest, final_uv, 0.0)

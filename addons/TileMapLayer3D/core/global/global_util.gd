@@ -1785,3 +1785,70 @@ static func apply_button_theme(button: Button, icon_name: String, size:float) ->
 			# Fallback to text if icon not found
 			button.text = icon_name  # Use the name passed as text if icon is missing
 
+
+# ==============================================================================
+# ANIMATED TILE UTILITIES
+# ==============================================================================
+
+
+## Compute animation frame dimensions from a TileAnimData resource.
+## Returns a Dictionary with: strip_size, frame_pixel_w, frame_pixel_h,
+## frame_tiles_x, frame_tiles_y, tiles_per_frame, anim_step_x, anim_step_y.
+## atlas_size is needed for step computation (pass Vector2.ZERO to skip step calc).
+## Returns empty Dictionary if anim_data is invalid.
+static func compute_anim_frame_info(anim_data: TileAnimData, atlas_size: Vector2 = Vector2.ZERO) -> Dictionary:
+	var result: Dictionary = {}
+	if anim_data.selection_uv_rects.is_empty() or anim_data.columns <= 0 or anim_data.rows <= 0:
+		return result
+	if anim_data.base_tile_size.x <= 0.0 or anim_data.base_tile_size.y <= 0.0:
+		return result
+
+	# Bounding box of all selection rects
+	var first: Rect2 = anim_data.selection_uv_rects[0]
+	var min_pos: Vector2 = first.position
+	var max_end: Vector2 = first.position + first.size
+	for rect: Rect2 in anim_data.selection_uv_rects:
+		min_pos.x = minf(min_pos.x, rect.position.x)
+		min_pos.y = minf(min_pos.y, rect.position.y)
+		max_end.x = maxf(max_end.x, rect.position.x + rect.size.x)
+		max_end.y = maxf(max_end.y, rect.position.y + rect.size.y)
+
+	var strip_size: Vector2 = max_end - min_pos
+	var frame_pixel_w: float = strip_size.x / anim_data.columns
+	var frame_pixel_h: float = strip_size.y / anim_data.rows
+	var frame_tiles_x: int = int(roundf(frame_pixel_w / anim_data.base_tile_size.x))
+	var frame_tiles_y: int = int(roundf(frame_pixel_h / anim_data.base_tile_size.y))
+
+	result["strip_size"] = strip_size
+	result["frame_pixel_w"] = frame_pixel_w
+	result["frame_pixel_h"] = frame_pixel_h
+	result["frame_tiles_x"] = frame_tiles_x
+	result["frame_tiles_y"] = frame_tiles_y
+	result["tiles_per_frame"] = frame_tiles_x * frame_tiles_y
+
+	if atlas_size.x > 0.0 and atlas_size.y > 0.0:
+		result["anim_step_x"] = frame_pixel_w / atlas_size.x
+		result["anim_step_y"] = frame_pixel_h / atlas_size.y
+
+	return result
+
+
+## Extract the tiles that belong to frame 0 from a TileAnimData.
+## selection_uv_rects is row-major across the ENTIRE strip (all frames).
+## Frame 0 occupies the first frame_tiles_x columns of each row.
+## For a 4×4 tree with 3 anim columns: strip is 12 cols × 4 rows,
+## frame 0 = columns 0-3 from each row.
+static func get_anim_frame0_tiles(anim_data: TileAnimData) -> Array[Rect2]:
+	var info: Dictionary = compute_anim_frame_info(anim_data)
+	if info.is_empty():
+		return []
+	var frame_tiles_x: int = info["frame_tiles_x"]
+	var frame_tiles_y: int = info["frame_tiles_y"]
+	var strip_tiles_x: int = frame_tiles_x * anim_data.columns
+	var result: Array[Rect2] = []
+	for row: int in range(frame_tiles_y):
+		for col: int in range(frame_tiles_x):
+			var idx: int = row * strip_tiles_x + col
+			if idx < anim_data.selection_uv_rects.size():
+				result.append(anim_data.selection_uv_rects[idx])
+	return result

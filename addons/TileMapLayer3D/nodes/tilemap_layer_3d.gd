@@ -58,9 +58,9 @@ extends Node3D
 ## See CLAUDE.md for migration instructions
 @export var _tile_transform_data: PackedFloat32Array = PackedFloat32Array()
 
-## Sparse storage for animation data (FLAT_SQUARE only, MVP)
+## Sparse storage for animation data (FLAT_SQUARE only)
 ## Same pattern as transform data: _tile_anim_indices[i] = -1 (static) or >= 0 (index into _tile_anim_data)
-## Each _tile_anim_data entry: 6 floats [columns, rows, total_frames, speed_fps, frame_scale_x, frame_scale_y]
+## Each _tile_anim_data entry: 5 floats [step_x, step_y, total_frames, anim_columns, speed_fps]
 @export var _tile_anim_indices: PackedInt32Array = PackedInt32Array()
 @export var _tile_anim_data: PackedFloat32Array = PackedFloat32Array()
 
@@ -407,27 +407,20 @@ func _rebuild_chunks_from_saved_data(force_mesh_rebuild: bool = false) -> void:
 		var custom_data: Color = uv_data.uv_color
 		chunk.multimesh.set_instance_custom_data(instance_index, custom_data)
 
-		# Set animation COLOR and frame scale for FLAT_SQUARE chunks (only chunk type with use_colors = true)
+		# Set animation COLOR for FLAT_SQUARE chunks (only chunk type with use_colors = true)
+		# COLOR = (step_x, step_y, total_frames, encoded_cols_and_speed)
 		if mesh_mode == GlobalConstants.MeshMode.FLAT_SQUARE and _tile_anim_indices.size() > i:
 			var anim_idx: int = _tile_anim_indices[i]
 			if anim_idx >= 0:
-				var ab: int = anim_idx * 6
+				var ab: int = anim_idx * 5
+				var step_x: float = _tile_anim_data[ab]
+				var step_y: float = _tile_anim_data[ab + 1]
+				var total_frames: float = _tile_anim_data[ab + 2]
+				var anim_columns: float = _tile_anim_data[ab + 3]
+				var speed_fps: float = _tile_anim_data[ab + 4]
+				var encoded_cols_speed: float = anim_columns + speed_fps / 256.0
 				chunk.multimesh.set_instance_color(instance_index, Color(
-					_tile_anim_data[ab], _tile_anim_data[ab + 1],
-					_tile_anim_data[ab + 2], _tile_anim_data[ab + 3]))
-
-				# Apply frame scale for multi-cell animated tiles (e.g., 4x4 tree frames)
-				# Offset origin so scaled quad covers grid cells starting from placement pos
-				# (mesh is centered at origin, scaling expands symmetrically — offset corrects this)
-				var scale_x: float = _tile_anim_data[ab + 4]
-				var scale_z: float = _tile_anim_data[ab + 5]
-				if scale_x != 1.0 or scale_z != 1.0:
-					var local_offset: Vector3 = Vector3(
-						(scale_x - 1.0) * grid_size * 0.5, 0.0,
-						(scale_z - 1.0) * grid_size * 0.5)
-					transform.origin += transform.basis * local_offset
-					transform.basis = transform.basis * Basis.from_scale(Vector3(scale_x, 1.0, scale_z))
-					chunk.multimesh.set_instance_transform(instance_index, transform)
+					step_x, step_y, total_frames, encoded_cols_speed))
 
 		# Increment visible count
 		chunk.multimesh.visible_instance_count += 1
@@ -1018,12 +1011,11 @@ func save_tile_data_direct(
 	tilt_offset: float = 0.0,
 	depth_scale: float = 0.1,
 	texture_repeat_mode: int = 0,  # 0=DEFAULT, 1=REPEAT
-	anim_columns: int = 1,
-	anim_rows: int = 1,
+	anim_step_x: float = 0.0,
+	anim_step_y: float = 0.0,
 	anim_total_frames: int = 1,
-	anim_speed_fps: float = 0.0,
-	anim_frame_scale_x: float = 1.0,
-	anim_frame_scale_y: float = 1.0
+	anim_columns: int = 1,
+	anim_speed_fps: float = 0.0
 ) -> void:
 	# Generate tile key for lookup
 	var tile_key: Variant = GlobalUtil.make_tile_key(grid_pos, orientation)
@@ -1037,8 +1029,7 @@ func save_tile_data_direct(
 		grid_pos, uv_rect, orientation, mesh_rotation, mesh_mode,
 		is_face_flipped, terrain_id, spin_angle, tilt_angle,
 		diagonal_scale, tilt_offset, depth_scale, texture_repeat_mode,
-		anim_columns, anim_rows, anim_total_frames, anim_speed_fps,
-		anim_frame_scale_x, anim_frame_scale_y
+		anim_step_x, anim_step_y, anim_total_frames, anim_columns, anim_speed_fps
 	)
 	_saved_tiles_lookup[tile_key] = new_index
 
@@ -1414,25 +1405,23 @@ func get_tile_data_at(index: int) -> Dictionary:
 			result["tilt_offset_factor"] = _tile_transform_data[param_base + 3]
 			result["depth_scale"] = _tile_transform_data[param_base + 4]
 
-	# Animation data with backward-compat defaults (static tile)
-	result["anim_columns"] = 1
-	result["anim_rows"] = 1
+	# Animation data with defaults (static tile)
+	result["anim_step_x"] = 0.0
+	result["anim_step_y"] = 0.0
 	result["anim_total_frames"] = 1
+	result["anim_columns"] = 1
 	result["anim_speed_fps"] = 0.0
-	result["anim_frame_scale_x"] = 1.0
-	result["anim_frame_scale_y"] = 1.0
 
 	if _tile_anim_indices.size() > index:
 		var anim_idx: int = _tile_anim_indices[index]
 		if anim_idx >= 0:
-			var anim_base: int = anim_idx * 6
-			if anim_base + 5 < _tile_anim_data.size():
-				result["anim_columns"] = int(_tile_anim_data[anim_base])
-				result["anim_rows"] = int(_tile_anim_data[anim_base + 1])
+			var anim_base: int = anim_idx * 5
+			if anim_base + 4 < _tile_anim_data.size():
+				result["anim_step_x"] = _tile_anim_data[anim_base]
+				result["anim_step_y"] = _tile_anim_data[anim_base + 1]
 				result["anim_total_frames"] = int(_tile_anim_data[anim_base + 2])
-				result["anim_speed_fps"] = _tile_anim_data[anim_base + 3]
-				result["anim_frame_scale_x"] = _tile_anim_data[anim_base + 4]
-				result["anim_frame_scale_y"] = _tile_anim_data[anim_base + 5]
+				result["anim_columns"] = int(_tile_anim_data[anim_base + 3])
+				result["anim_speed_fps"] = _tile_anim_data[anim_base + 4]
 
 	return result
 
@@ -1493,12 +1482,11 @@ func add_tile_direct(
 	tilt_offset: float = 0.0,
 	depth_scale: float = 0.1,  # NEW tile default
 	texture_repeat_mode: int = 0,  # TEXTURE_REPEAT: 0=DEFAULT, 1=REPEAT
-	anim_columns: int = 1,
-	anim_rows: int = 1,
+	anim_step_x: float = 0.0,
+	anim_step_y: float = 0.0,
 	anim_total_frames: int = 1,
-	anim_speed_fps: float = 0.0,
-	anim_frame_scale_x: float = 1.0,
-	anim_frame_scale_y: float = 1.0
+	anim_columns: int = 1,
+	anim_speed_fps: float = 0.0
 ) -> int:
 	var index: int = _tile_positions.size()
 
@@ -1537,15 +1525,14 @@ func add_tile_direct(
 		_tile_transform_indices.append(-1)
 
 	# Animation data (sparse, same pattern as transform data)
-	var is_animated: bool = anim_speed_fps > 0.0 and anim_total_frames > 1
+	var is_animated: bool = anim_total_frames > 1
 	if is_animated:
-		_tile_anim_indices.append(_tile_anim_data.size() / 6)  # 6 floats per entry
-		_tile_anim_data.append(float(anim_columns))
-		_tile_anim_data.append(float(anim_rows))
+		_tile_anim_indices.append(_tile_anim_data.size() / 5)  # 5 floats per entry
+		_tile_anim_data.append(anim_step_x)
+		_tile_anim_data.append(anim_step_y)
 		_tile_anim_data.append(float(anim_total_frames))
+		_tile_anim_data.append(float(anim_columns))
 		_tile_anim_data.append(anim_speed_fps)
-		_tile_anim_data.append(anim_frame_scale_x)
-		_tile_anim_data.append(anim_frame_scale_y)
 	else:
 		_tile_anim_indices.append(-1)
 
@@ -1608,19 +1595,19 @@ func remove_tile_columnar(index: int) -> void:
 					push_error("remove_tile_columnar: Transform index underflow at tile %d" % i)
 					_tile_transform_indices[i] = -1  # Reset to "no params"
 
-	# Handle animation data (same sparse pattern as transform data, 6 floats per entry)
+	# Handle animation data (same sparse pattern as transform data, 5 floats per entry)
 	if _tile_anim_indices.size() > index:
 		var anim_idx: int = _tile_anim_indices[index]
 		_tile_anim_indices.remove_at(index)
 
 		if anim_idx >= 0:
-			var anim_base: int = anim_idx * 6
+			var anim_base: int = anim_idx * 5
 
-			if anim_base + 5 >= _tile_anim_data.size():
+			if anim_base + 4 >= _tile_anim_data.size():
 				push_error("remove_tile_columnar: Anim data index %d out of bounds (size=%d)" % [anim_base, _tile_anim_data.size()])
 				return
 
-			for i in range(6):
+			for i in range(5):
 				_tile_anim_data.remove_at(anim_base)
 
 			# Update indices that pointed past the removed entry
