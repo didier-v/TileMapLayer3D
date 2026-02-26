@@ -6,7 +6,6 @@ uniform bool use_nearest_texture = true;
 uniform sampler2D albedo_texture_nearest : source_color, filter_nearest, repeat_disable;
 uniform sampler2D albedo_texture_linear : source_color, filter_linear, repeat_disable;
 uniform bool debug_show_backfaces = true;
-uniform float inset_percentage = 0.01; // 1% inset based on tile UV size, prevents bleeding for various atlas/tile sizes
 
 varying flat vec4 uv_rect_data;
 varying flat vec4 anim_data;
@@ -22,7 +21,7 @@ void fragment() {
     vec2 uv_max = uv_rect_data.ba;
 
     // Animation data packed as (frame_step_x, frame_step_y, total_frames, cols + speed/256)
-    // Static tiles: default COLOR=(1,1,1,1), guard 1.0 > 1.0 = false → skipped
+    // Static tiles: default COLOR=(1,1,1,1), guard 1.0 > 1.0 = false - means it's skipped
     float frame_step_x = anim_data.r;
     float frame_step_y = anim_data.g;
     float anim_total = anim_data.b;
@@ -44,16 +43,16 @@ void fragment() {
     vec2 flipped_uv = vec2(UV.x, 1.0 - UV.y);
     vec2 remapped_uv = mix(uv_min, uv_max, flipped_uv);
 
-    // Atlas-bleed prevention: inset UVs to prevent sampling across tile boundaries
     vec2 final_uv;
     if (use_nearest_texture) {
         // Nearest: no interpolation, no bleed possible — no inset needed
         final_uv = remapped_uv;
     } else {
-        // Linear: bilinear interpolation can sample across tile boundaries — inset needed
-        vec2 tile_uv_size = uv_max - uv_min;
-        vec2 inset = tile_uv_size * inset_percentage;
-        final_uv = clamp(remapped_uv, uv_min + inset, uv_max - inset);
+        final_uv = remapped_uv;
+
+        // Linear: half-texel inset — exact minimum to prevent bilinear bleed
+        // vec2 half_texel = 0.5 / vec2(textureSize(albedo_texture_linear, 0));
+        // final_uv = clamp(remapped_uv, uv_min + half_texel, uv_max - half_texel);
     }
 
     // Sample texture with correct filter mode (nearest or linear)
