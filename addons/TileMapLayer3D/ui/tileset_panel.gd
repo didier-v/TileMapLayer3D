@@ -513,9 +513,9 @@ func _load_settings_to_ui(settings: TileMapLayerSettings) -> void:
 
 func initialize_animated_tile_manager() -> void:
 	if animated_tile_manager:
-		print("Initializing AnimatedTileManager: animated_tile_manager called")
+		# print("Initializing AnimatedTileManager: animated_tile_manager called")
 		if current_node:
-			print("Initializing AnimatedTileManager: current TileMapLayerNode is: ", current_node.name)
+			# print("Initializing AnimatedTileManager: current TileMapLayerNode is: ", current_node.name)
 			animated_tile_manager.current_node = current_node
 			animated_tile_manager.load_animated_tile_settings(current_texture)
 

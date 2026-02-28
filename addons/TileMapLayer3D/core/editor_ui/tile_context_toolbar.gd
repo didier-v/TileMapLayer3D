@@ -72,7 +72,7 @@ signal autotile_depth_changed(depth: float)
 @onready var smart_mode_option_btn: OptionButton = %SmartSelectionModeOptBtn
 @onready var smart_select_replace_btn: Button = %SmartSelectReplaceBtn
 @onready var smart_select_delete_btn: Button = %SmartSelectDeleteBtn
-
+@onready var smart_select_clear_btn: Button = %SmartSelectClearBtn
 
 # @onready var tile_size_x: SpinBox = %TileSizeX
 # @onready var tile_size_y: SpinBox = %TileSizeY
@@ -130,6 +130,9 @@ func prepare_ui_components() -> void:
 
 	smart_select_delete_btn.pressed.connect(_on_smart_select_delete_pressed)
 	GlobalUtil.apply_button_theme(smart_select_delete_btn, "Remove", GlobalConstants.BUTTOM_CONTEXT_UI_SIZE) # Remove
+
+	smart_select_clear_btn.pressed.connect(_on_smart_select_clear_pressed)
+	GlobalUtil.apply_button_theme(smart_select_clear_btn, "Clear", GlobalConstants.BUTTOM_CONTEXT_UI_SIZE)
 
 	var ui_scale: float = GlobalUtil.get_editor_ui_scale()
 
@@ -340,3 +343,6 @@ func _on_smart_select_delete_pressed() -> void:
 	smart_select_operation_btn_pressed.emit(GlobalConstants.SmartSelectionOperation.DELETE)
 
 	pass
+
+func _on_smart_select_clear_pressed():
+	smart_select_operation_btn_pressed.emit(GlobalConstants.SmartSelectionOperation.CLEAR)

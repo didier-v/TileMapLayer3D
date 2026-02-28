@@ -313,22 +313,20 @@ static func set_cursor_on_plane(on_plane: bool) -> void:
 		is_cursor_on_plane = on_plane
 		print_cursor_plane_state(on_plane)
 
-## Requirement #1: Print exact wall detection (6D)
 ## Prints current wall every time camera angle changes
 static func print_current_wall() -> void:
 	var wall_name: String = GlobalUtil.TileOrientation.keys()[current_plane_6d]
 	#print("Current Wall: ", wall_name, " (6D: ", current_plane_6d, ", 18D: ", current_tile_orientation_18d, ")")
 
 
-## Requirement #3: Print plane focus changes
+
 ## Prints when switching from one wall/plane to another
 static func print_plane_change(old_plane: int, new_plane: int) -> void:
 	var old_name: String = GlobalUtil.TileOrientation.keys()[old_plane]
 	var new_name: String = GlobalUtil.TileOrientation.keys()[new_plane]
-	print("Plane Changed: ", old_name, " → ", new_name)
+	# print("Plane Changed: ", old_name, " → ", new_name)
 
 
-## Requirement #2: Print cursor on/off plane state
 ## Prints when cursor enters or exits a plane
 static func print_cursor_plane_state(is_on: bool) -> void:
 	#if is_on:

@@ -756,6 +756,7 @@ enum SmartSelectionMode {
 enum SmartSelectionOperation {
 	REPLACE = 0, # Changes the UV of the Selected Tiles to the one selected in PlacementManger (TileSetPanel)
 	DELETE = 1, # Deletes all Tiles in Selected Tiles
+	CLEAR = 2, # Clears the selection without modifying the tiles
 }
 
 # enum MeshModeItem {

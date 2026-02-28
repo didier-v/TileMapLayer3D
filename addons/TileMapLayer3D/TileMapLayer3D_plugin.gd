@@ -701,8 +701,8 @@ func _handle_mouse_button_press(event: InputEvent, camera: Camera3D) -> int:
 	if not (is_left or is_right):
 		return AFTER_GUI_INPUT_PASS
 
-	# SMART SELECT MODE SECTION
-	if is_left and current_tile_map3d.settings.is_smart_select_active:
+	# SMART SELECT MODE SECTION (only on press, not release — prevents double-fire)
+	if is_left and event.pressed and current_tile_map3d.settings.is_smart_select_active:
 		# var smart_select_manager: SmartSelectManager = SmartSelectManager.new()
 		var result: Dictionary = SmartSelectManager.pick_tile_at(camera, event.position, current_tile_map3d)
 
@@ -722,7 +722,9 @@ func _handle_mouse_button_press(event: InputEvent, camera: Camera3D) -> int:
 		match current_tile_map3d.settings.smart_select_mode:
 			GlobalConstants.SmartSelectionMode.SINGLE_PICK:
 				var tile_key = result["tile_key"]
-				if not current_tile_map3d.smart_selected_tiles.has(tile_key):
+				if current_tile_map3d.smart_selected_tiles.has(tile_key):
+					current_tile_map3d.smart_selected_tiles.erase(tile_key)
+				else:
 					current_tile_map3d.smart_selected_tiles.append(tile_key)
 
 			GlobalConstants.SmartSelectionMode.CONNECTED_UV:
@@ -2041,6 +2043,8 @@ func _on_editor_ui_smart_select_operation_requested(smart_mode_operation: Global
 			placement_manager.start_paint_stroke(get_undo_redo(), "Smart Select Erase")
 			for key: int in current_tile_map3d.smart_selected_tiles:
 				var data: Dictionary = current_tile_map3d.get_tile_data_at(current_tile_map3d.get_tile_index(key))
+				if data.is_empty():
+					continue  # Tile already erased or stale key
 				# erase_tile_at needs grid_pos + orientation, not tile_key directly
 				var pos: Vector3 = data["grid_position"]
 				var ori: int = data["orientation"]
