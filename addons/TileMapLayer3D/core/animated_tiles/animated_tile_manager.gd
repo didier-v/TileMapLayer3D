@@ -7,6 +7,7 @@ class_name AnimatedTileManager
 @onready var anim_tile_col: SpinBox = %AnimTileCol
 @onready var anim_tile_frames: SpinBox = %AnimTileFrames
 @onready var anim_tile_speed: SpinBox = %AnimTileSpeed
+@onready var anim_tile_display_name: LineEdit = %AnimTileDisplayName
 
 @onready var create_anim_tile_button: Button = %CreateAnimTileButton
 @onready var delete_anim_tile_button: Button = %DeleteAnimTileButton
@@ -17,11 +18,35 @@ signal anim_tile_frame0_selected(tiles: Array[Rect2])
 
 var selected_tiles: Array[Rect2] = []
 var base_tile_size: Vector2 = Vector2.ZERO
+var current_texture: Texture2D = null
 
 var current_node: TileMapLayer3D = null  # Reference passed by TileSetPanel
 
 func _ready() -> void:
 	_connect_signals()
+	_load_default_ui_values()
+
+func _load_default_ui_values() -> void:
+	anim_tile_row.value = 1
+	anim_tile_col.value = 1
+	anim_tile_frames.value = 1
+	anim_tile_speed.value = 1.0
+	anim_tile_display_name.text = "AnimTile Name..."
+
+	var ui_scale: float = GlobalUtil.get_editor_ui_scale()
+	anim_tile_row.get_line_edit().add_theme_font_size_override("font_size", int(10 * ui_scale))
+	anim_tile_col.get_line_edit().add_theme_font_size_override("font_size", int(10 * ui_scale))
+	anim_tile_frames.get_line_edit().add_theme_font_size_override("font_size", int(10 * ui_scale))
+	anim_tile_speed.get_line_edit().add_theme_font_size_override("font_size", int(10 * ui_scale))
+
+	anim_tile_display_name.add_theme_font_size_override("font_size", int(10 * ui_scale))
+	
+	GlobalUtil.apply_button_theme(create_anim_tile_button, "New", GlobalConstants.BUTTOM_CONTEXT_UI_SIZE)
+	GlobalUtil.apply_button_theme(delete_anim_tile_button, "Remove", GlobalConstants.BUTTOM_CONTEXT_UI_SIZE)
+
+	anim_tile_items_list.add_theme_font_size_override("font_size", int(10 * ui_scale))
+
+
 
 func _connect_signals() -> void:
 	if not anim_tile_items_list.item_selected.is_connected(_on_anim_tile_selected):
@@ -56,28 +81,35 @@ func on_tileset_selection_changed(selected_uv_tiles: Array[Rect2], _tile_size: V
 	pass
 
 
-func load_animated_tile_settings(default_idx_selected: int = 0) -> void:
-	if not current_node:
+func load_animated_tile_settings(_current_texture: Texture2D , _default_idx_selected: int = 0) -> void:
+	if not current_node or not current_node.settings or not _current_texture:
 		return
-	
+
+	current_texture = _current_texture
 	var settings = current_node.settings
-	if not settings:
-		return
 
 	anim_tile_items_list.clear()
 
 	print("Loading animated tiles: ", settings.animate_tiles_list.size(), " found in settings.")
+	#Loop through the animated tiles in settings and populate the UI list
 	for item_id in settings.animate_tiles_list.keys():
 		var anim_data: TileAnimData = settings.animate_tiles_list[item_id]
 
+		#Get item icon from TileSet Texture using the first UV rect (if available) as a reference
+		var item_icon: Texture = null
+		if _current_texture:
+			if not anim_data.selection_uv_rects.is_empty():
+				# var first_uv_rect: Rect2 = anim_data.selection_uv_rects[0]
+				item_icon = GlobalUtil.get_first_frame_texture(_current_texture, anim_data)	
+
 		# Add an item to the UI List
-		var anim_item_index = anim_tile_items_list.add_item(anim_data.display_name, null, true)
+		var anim_item_index = anim_tile_items_list.add_item(anim_data.display_name, item_icon, true)
 
 		#Ensure this item has the correct referecent to the animated tile data via metadata (used for selection sync and deletion)
 		anim_tile_items_list.set_item_metadata(anim_item_index, anim_data.item_id)
-	
-	if anim_tile_items_list.get_item_count() > 0:
-		var clamped_index: int = clampi(default_idx_selected, 0, anim_tile_items_list.get_item_count() - 1)
+
+	if anim_tile_items_list.item_count > 0:
+		var clamped_index: int = clampi(_default_idx_selected, 0, anim_tile_items_list.item_count - 1)
 		anim_tile_items_list.select(clamped_index)
 		_on_anim_tile_selected(clamped_index)
 
@@ -100,6 +132,7 @@ func _on_anim_tile_selected(selected_item_index: int) -> void:
 		anim_tile_col.value = anim_data.columns
 		anim_tile_frames.value = anim_data.frames
 		anim_tile_speed.value = anim_data.speed
+		anim_tile_display_name.text = anim_data.display_name
 		print("Loaded tile data: ", anim_data.display_name, " with UVs: ", anim_data.selection_uv_rects)
 
 		# Auto-select frame 0 tiles in the tileset display (Signal Up pattern)
@@ -127,6 +160,7 @@ func _on_create_anim_tile_btn_pressed() -> void:
 	new_anim_data.frames = int(anim_tile_frames.value)
 	new_anim_data.speed = anim_tile_speed.value
 	new_anim_data.base_tile_size = base_tile_size
+	new_anim_data.display_name = anim_tile_display_name.text
 
 
 	settings.animate_tiles_list[new_anim_data.item_id] = new_anim_data
@@ -135,7 +169,7 @@ func _on_create_anim_tile_btn_pressed() -> void:
 
 	# Reload list; newly added item will be last in the list
 	var new_index: int = settings.animate_tiles_list.size() - 1
-	load_animated_tile_settings(new_index)
+	load_animated_tile_settings(current_texture,new_index)
 
 func _on_delete_anim_tile_btn_pressed() -> void:
 	if not current_node:
@@ -154,7 +188,12 @@ func _on_delete_anim_tile_btn_pressed() -> void:
 
 	if settings.animate_tiles_list.has(item_id):
 		settings.animate_tiles_list.erase(item_id)
+		anim_tile_items_list.remove_item(selected_ui_index)
 		settings.emit_changed()
 
 	var new_select_index: int = maxi(selected_ui_index - 1, 0)
-	load_animated_tile_settings(new_select_index)
+
+	if anim_tile_items_list.item_count > 0:
+		load_animated_tile_settings(current_texture,new_select_index)
+	else:
+		_load_default_ui_values()

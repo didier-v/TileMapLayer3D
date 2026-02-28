@@ -61,7 +61,7 @@ func prepare_ui_components() -> void:
 	GlobalUtil.apply_button_theme(auto_tile_button, "TileSet", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
 	GlobalUtil.apply_button_theme(smart_select_button, "EditPivot", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
 	GlobalUtil.apply_button_theme(settings_button, "Tools", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
-	GlobalUtil.apply_button_theme(animated_tiles_button, "AT", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
+	GlobalUtil.apply_button_theme(animated_tiles_button, "Animation", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
 
 
 ## Sync UI state from node settings

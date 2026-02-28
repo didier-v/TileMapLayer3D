@@ -517,7 +517,7 @@ func initialize_animated_tile_manager() -> void:
 		if current_node:
 			print("Initializing AnimatedTileManager: current TileMapLayerNode is: ", current_node.name)
 			animated_tile_manager.current_node = current_node
-			animated_tile_manager.load_animated_tile_settings()
+			animated_tile_manager.load_animated_tile_settings(current_texture)
 
 		# Connect frame 0 auto-selection signal (Signal Up: child emits, parent listens)
 		if not animated_tile_manager.anim_tile_frame0_selected.is_connected(select_tiles_programmatically):

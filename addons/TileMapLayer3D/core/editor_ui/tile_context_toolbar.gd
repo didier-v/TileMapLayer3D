@@ -127,21 +127,14 @@ func prepare_ui_components() -> void:
 	_flip_face_btn.toggled.connect(_on_flip_toggled)
 	GlobalUtil.apply_button_theme(_flip_face_btn, "ExpandTree", GlobalConstants.BUTTOM_CONTEXT_UI_SIZE)
 
-	# #SmartSelect button (G) - FUTURE FEATURE #TODO # DEBUG
-	# smart_select_btn.pressed.connect(_on_smart_select_pressed)
-	# apply_button_theme(smart_select_btn, "EditPivot")
-
-	#SmartSelect Replace button - FUTURE FEATURE #TODO # DEBUG
 	smart_select_replace_btn.pressed.connect(_on_smart_select_replace_pressed)
 	GlobalUtil.apply_button_theme(smart_select_replace_btn, "Loop", GlobalConstants.BUTTOM_CONTEXT_UI_SIZE) #Loop
 
-	#SmartSelect Delete button - FUTURE FEATURE #TODO # DEBUG
 	smart_select_delete_btn.pressed.connect(_on_smart_select_delete_pressed)
 	GlobalUtil.apply_button_theme(smart_select_delete_btn, "Remove", GlobalConstants.BUTTOM_CONTEXT_UI_SIZE) # Remove
 
 	var ui_scale: float = GlobalUtil.get_editor_ui_scale()
 
-	#SmartSelect Mode - FUTURE FEATURE #TODO # DEBUG
 	smart_mode_option_btn.item_selected.connect(_on_smart_select_mode_changed)
 	smart_mode_option_btn.add_theme_font_size_override("font_size", int(10 * ui_scale))
 	smart_mode_option_btn.custom_minimum_size.x = 115 * ui_scale

@@ -775,6 +775,7 @@ enum SmartSelectionOperation {
 const BUTTOM_CONTEXT_UI_SIZE = 32
 const BUTTOM_MAIN_UI_SIZE = 36
 
+
 #endregion
 # ==============================================================================
 #region AUTOTILING CONSTANTS

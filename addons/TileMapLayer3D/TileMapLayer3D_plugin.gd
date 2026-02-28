@@ -1961,6 +1961,8 @@ func _on_tilemap_main_mode_changed(mode: GlobalConstants.MainAppMode) -> void:
 	# Force preview refresh
 	_invalidate_preview()
 
+	show_bottom_panel_and_ui()
+
 ## Handler for rotation request from side toolbar (Q/E buttons)
 func _on_editor_ui_rotate_requested(direction: int) -> void:
 	if not placement_manager:

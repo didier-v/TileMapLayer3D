@@ -1852,3 +1852,29 @@ static func get_anim_frame0_tiles(anim_data: TileAnimData) -> Array[Rect2]:
 			if idx < anim_data.selection_uv_rects.size():
 				result.append(anim_data.selection_uv_rects[idx])
 	return result
+
+static func get_first_frame_texture(tileset_texture: Texture2D, anim_data: TileAnimData) -> Texture:
+	if not tileset_texture:
+		return null
+
+	var scale : float = get_editor_ui_scale()
+	var icon_size: int = GlobalConstants.BUTTOM_CONTEXT_UI_SIZE * scale
+
+	#Get the entire area for the uv_rects
+	var frame0_tiles: Array[Rect2] = get_anim_frame0_tiles(anim_data)
+
+	var min_pos: Vector2 = frame0_tiles[0].position
+	var max_end: Vector2 = frame0_tiles[0].position + frame0_tiles[0].size
+	for rect: Rect2 in frame0_tiles:
+		min_pos.x = minf(min_pos.x, rect.position.x)
+		min_pos.y = minf(min_pos.y, rect.position.y)
+		max_end.x = maxf(max_end.x, rect.position.x + rect.size.x)
+		max_end.y = maxf(max_end.y, rect.position.y + rect.size.y)
+	
+	var tile_region: Rect2 = Rect2(min_pos, max_end - min_pos)
+	var image = tileset_texture.get_image().get_region(tile_region) 
+	# var image = tileset_texture.get_image().get_region(uv_rects[0])# This gets ONLY THE FIRST TILE. 
+
+	image.resize(icon_size, icon_size)  # Resize to icon size for display
+	var region_texture = ImageTexture.new().create_from_image(image)
+	return region_texture
