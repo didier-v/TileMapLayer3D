@@ -1,4 +1,20 @@
 ## TileMapLayer3D 🧩
+
+**Version 0.7.0** - New Featue - ANIMATED TILES
+
+- This feature works with a concept of a Animation Frame. A frame is not a single tile, it is a region of your tileset that can span multiple tiles. You select the entire area of your animation in the tileset, then tell the plugin how to subdivide it into frames using Rows and Columns.
+
+- For example, if your tileset has a 2×2 waterfall texture that animates across 4 steps laid out horizontally, you would select the full 8×2 tile region and set: Columns = 4, Rows = 1, Frames = 4. Each frame will be a 2×2 block of tiles. The animation cycles through these frames automatically.
+
+- How to use it:
+1. Switch to Animated Tiles mode in the top toolbar
+2. Select the full tile region in the tileset that contains all animation frames
+3. Set Rows / Columns to define how the region is subdivided into frames
+4. Set total frames to play (can be less than Rows × Columns to skip trailing slots)
+5. Set Speed — playback rate
+6. Click "New" to save the animation definition
+7. Select it from the list and paint in the 3D viewport. Tiles animate immediately
+
 **Version 0.6.0** - Multiple important updates and refactors.
 
 UI Updates:
