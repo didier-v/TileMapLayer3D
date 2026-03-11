@@ -660,7 +660,7 @@ func _handle_mouse_painting_movement(event: InputEvent, camera: Camera3D) -> voi
 
 		# update the brush position as the mouse moves so the gizmo follows the cursor.
 		if not quick_result.is_empty():
-			_sculpt_manager.update_brush_position(quick_result.grid_pos, current_tile_map3d.settings.grid_size, quick_result.orientation)
+			_sculpt_manager.update_brush_position(quick_result.grid_pos, current_tile_map3d.settings.grid_size, quick_result.orientation, current_tile_map3d.settings.grid_snap_size)
 			_sculpt_manager.on_mouse_move(event.position.y)
 			# Show the floor grid while sculpting — same call as normal placement mode
 			if tile_cursor:

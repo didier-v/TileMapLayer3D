@@ -741,7 +741,7 @@ const AUTOTILE_BITMASK_BY_DIRECTION: Dictionary = {
 
 #region Sculpt Mode
 
-## Brush radius default — 2 = 5×5 circle footprint
+## Brush radius default: 2 = 5×5
 const SCULPT_BRUSH_RADIUS_DEFAULT: int = 2
 
 ## Screen pixels per world unit when dragging to raise/lower in Stage 2.
@@ -764,5 +764,17 @@ const SCULPT_GIZMO_FLOOR_OFFSET: float = 0.005
 ## Cell quad size relative to grid_size. 0.9 = 90%, leaving a visible gap
 ## between adjacent cells so the grid structure is clear.
 const SCULPT_CELL_GAP_FACTOR: float = 0.9
+
+## Cell type within a brush shape template.
+## Drives both gizmo rendering (square quad vs triangle mesh) and tile placement decisions.
+## Each triangle fills exactly half of a 1x1 grid cell, cut diagonally corner-to-corner.
+## The named corner (NE/NW/SE/SW) is where the right-angle vertex sits.
+enum SculptCellType {
+	SQUARE = 0,  ## Full 1x1 cell
+	TRI_NE = 1,  ## Right-angle at +X,-Z corner, fills NE half
+	TRI_NW = 2,  ## Right-angle at -X,-Z corner, fills NW half
+	TRI_SE = 3,  ## Right-angle at +X,+Z corner, fills SE half
+	TRI_SW = 4,  ## Right-angle at -X,+Z corner, fills SW half
+}
 
 #endregion
