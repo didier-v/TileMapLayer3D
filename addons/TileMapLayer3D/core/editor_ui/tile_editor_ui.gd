@@ -38,6 +38,7 @@ signal flip_requested()
 signal smart_select_operation_requested(smart_mode: GlobalConstants.SmartSelectionOperation)
 
 
+
 # --- Member Variables ---
 
 ## Reference to the main plugin (for accessing managers and EditorPlugin methods)
@@ -129,7 +130,6 @@ func _create_context_toolbar() -> void:
 	_context_toolbar.flip_btn_pressed.connect(_on_flip_btn_pressed)
 	_context_toolbar.smart_select_mode_changed.connect(_on_smart_select_mode_changed)
 	_context_toolbar.smart_select_operation_btn_pressed.connect(_on_smart_select_operation_btn_pressed)
-	_context_toolbar.sculp_mode_btn_pressed.connect(_on_sculp_mode_btn_pressed)
 
 
 	# Add to editor's left side panel
@@ -339,8 +339,3 @@ func _on_flip_btn_pressed() -> void:
 	flip_requested.emit()
 
 
-## Triggered when Sculp Mode button is pressed in context toolbar
-func _on_sculp_mode_btn_pressed() -> void:
-	if _active_tilema3d_node:
-		# Update settings to confirm sculpt mode
-		_active_tilema3d_node.settings.main_app_mode = GlobalConstants.MainAppMode.SCULPT

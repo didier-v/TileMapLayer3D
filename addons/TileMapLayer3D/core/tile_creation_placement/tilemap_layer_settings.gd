@@ -204,7 +204,22 @@ extends Resource
 		if uv_selection_mode != value:
 			uv_selection_mode = value
 			emit_changed()
+# EDITOR STATE
+@export_group("Sculpt Mode")
 
+## Brush Type used in Sculpt Mode (Enum defined in Global Constants)
+@export var sculpt_brush_type: GlobalConstants.SculptBrushType = GlobalConstants.SculptBrushType.DIAMOND:
+	set(value):
+		if sculpt_brush_type != value:
+			sculpt_brush_type = value
+			emit_changed()
+
+## Brush Size used in Sculpt Mode 
+@export_range(1, 3, 1) var sculpt_brush_size: float = GlobalConstants.SCULPT_BRUSH_SIZE_DEFAULT:
+	set(value):
+		if sculpt_brush_size != value:
+			sculpt_brush_size = value
+			emit_changed()
 
 # EDITOR STATE
 @export_group("Editor State")

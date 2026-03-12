@@ -731,18 +731,12 @@ const AUTOTILE_BITMASK_BY_DIRECTION: Dictionary = {
 	"NW": AUTOTILE_BITMASK_NW,
 }
 
-## Godot TileSet peering bit to bitmask value mapping
-## Used by TileSetBitmaskMapper to convert Godot's peering bit enum to our bitmask
-## Key: TileSet.CellNeighbor enum value, Value: Our bitmask bit value
-## NOTE: This dictionary is populated at runtime since TileSet enum isn't available
-## at const initialization time. Use get_peering_to_bitmask() helper instead.
-
 #endregion
 
 #region Sculpt Mode
 
-## Brush radius default: 2 = 5×5
-const SCULPT_BRUSH_RADIUS_DEFAULT: int = 2
+## Brush size default: 2 = 5×5
+const SCULPT_BRUSH_SIZE_DEFAULT: int = 2
 
 ## Screen pixels per world unit when dragging to raise/lower in Stage 2.
 ## 100px drag = 5 world units.
@@ -775,6 +769,11 @@ enum SculptCellType {
 	TRI_NW = 2,  ## Right-angle at -X,-Z corner, fills NW half
 	TRI_SE = 3,  ## Right-angle at +X,+Z corner, fills SE half
 	TRI_SW = 4,  ## Right-angle at -X,+Z corner, fills SW half
+}
+
+enum SculptBrushType {
+	DIAMOND = 0, 
+	SQUARE = 1,  
 }
 
 ## Maps SculptCellType → Vector2i(mesh_mode, mesh_rotation) for tile placement.

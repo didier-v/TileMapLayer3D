@@ -28,7 +28,7 @@ func _redraw() -> void:
 
 	var center: Vector3 = sculpt_manager.brush_world_pos
 	var gs: float = sculpt_manager.grid_size
-	var radius: int = sculpt_manager.brush_radius
+	var radius: int = sculpt_manager.brush_type
 	var raise_amount: float = sculpt_manager.get_raise_amount()
 
 	## The floor baseline used for ALL height calculations.
@@ -67,8 +67,8 @@ func _redraw() -> void:
 		sculpt_manager.state == SculptManager.SculptState.DRAWING
 	)
 	if show_live_brush:
-		for offset: Vector2i in sculpt_manager._shape_template:
-			var cell_type: int = sculpt_manager._shape_template[offset]
+		for offset: Vector2i in sculpt_manager._brush_template:
+			var cell_type: int = sculpt_manager._brush_template[offset]
 			var grid_pos: Vector3 = Vector3(snap_x + offset.x, 0, snap_z + offset.y)
 			var cell_pos: Vector3 = GlobalUtil.grid_to_world(grid_pos, gs)
 			cell_pos.y = floor_y

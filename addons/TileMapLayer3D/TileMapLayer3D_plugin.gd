@@ -145,6 +145,8 @@ func _enter_tree() -> void:
 
 	editor_ui._context_toolbar.autotile_mesh_mode_changed.connect(_on_autotile_mesh_mode_changed)
 	editor_ui._context_toolbar.autotile_depth_changed.connect(_on_autotile_depth_changed)
+
+	editor_ui._context_toolbar.sculp_brush_changed.connect(_on_sculp_mode_brush_changed)
 	
 	# Connect plugin signals TO tileset_panel (reverse direction)
 	tile_position_updated.connect(editor_ui._context_toolbar.update_tile_position)
@@ -288,12 +290,12 @@ func _edit(object: Object) -> void:
 
 		if tile_preview:
 			tile_preview.current_depth_scale = correct_depth
+		
+		if _sculpt_manager:
+			_sculpt_manager.set_active_node(current_tile_map3d)
 
-		# # Sync UI (deferred to ensure UI is ready)
-		# call_deferred("_sync_depth_ui_on_load")
-
-		# Restore mesh mode from settings
 		current_tile_map3d.current_mesh_mode = current_tile_map3d.settings.mesh_mode as GlobalConstants.MeshMode
+
 		if tile_preview:
 			tile_preview.current_mesh_mode = current_tile_map3d.current_mesh_mode
 
@@ -310,12 +312,12 @@ func _edit(object: Object) -> void:
 	else:
 		current_tile_map3d = null
 		tileset_panel.set_active_node(null)
-		_cleanup_cursor()
-
-		# Hide UI: bottom panel tab + toolbars
-		hide_bottom_panel_and_ui()
 		if _sculpt_manager:
-				_sculpt_manager.reset()  # Reset sculpt state when deselecting node
+			_sculpt_manager.set_active_node(null)
+			_sculpt_manager.reset()  # Reset sculpt state when deselecting node
+
+		_cleanup_cursor()
+		hide_bottom_panel_and_ui()
 
 		# if _bottom_panel_button:
 		# 	_bottom_panel_button.visible = false
@@ -1637,6 +1639,15 @@ func _on_texture_repeat_mode_changed(mode: int) -> void:
 		pass  #print("[TEXTURE_REPEAT] PLUGIN: WARNING - placement_manager is null!")
 
 
+## Triggered when Sculp Brush properties are changed (type or size)s
+func _on_sculp_mode_brush_changed(brush_type: GlobalConstants.SculptBrushType, brush_size: float) -> void:
+	if current_tile_map3d and _sculpt_manager:
+		# Update settings for sculpt brush properties
+		current_tile_map3d.settings.sculpt_brush_type = brush_type
+		current_tile_map3d.settings.sculpt_brush_size = brush_size
+		_sculpt_manager.rebuild_brush_shape_template()
+		print("Sculpt brush changed - Type: ", brush_type, " Size: ", brush_size)
+
 ## Handler for grid size change
 ## NOTE: Tile position recalculation and chunk rebuild are handled by
 ## TileMapLayer3D._apply_settings() via the Settings.changed signal.
@@ -2266,8 +2277,8 @@ func _on_sculpt_volume_committed(cells: Dictionary, base_y: float, raise_amount:
 	var uv_rect: Rect2 = placement_manager.current_tile_uv
 	var height_in_grid: float = raise_amount / gs
 	var abs_height_cells: int = absi(roundi(height_in_grid))
-	if abs_height_cells == 0:
-		return
+	# if abs_height_cells == 0:
+	# 	return
 
 	## Grid Y positions for floors and walls (derived from reference scene)
 	## base_y is already a grid coordinate (e.g., -0.5 for world Y=0)

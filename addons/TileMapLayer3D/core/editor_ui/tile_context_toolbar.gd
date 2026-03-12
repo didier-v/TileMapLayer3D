@@ -31,8 +31,8 @@ signal autotile_mesh_mode_changed(mesh_mode: int)
 # Emitted when autotile depth scale changes (for BOX/PRISM mesh modes)
 signal autotile_depth_changed(depth: float)
 
-# Emitted when Sculp Button is clicked
-signal sculp_mode_btn_pressed()
+## Emitted when Sculpt Mode Brush changed (Size and Type)
+signal sculp_brush_changed(brush_type: GlobalConstants.SculptBrushType, brush_size: float)
 
 # --- Member Variables ---
 
@@ -77,7 +77,10 @@ signal sculp_mode_btn_pressed()
 
 
 #Sculp Mode Controls
-@onready var sculp_mode_btn: Button = %SculpModeBtn
+# @onready var sculp_mode_btn: Button = %SculpModeBtn
+@onready var sculp_brush_dropdown: OptionButton = %SculpBrushDropdown
+@onready var sculpt_brush_size_hslider: HSlider = %SculptBrushSizeHSlider
+
 
 ## UI Variables
 var _updating_ui: bool = false
@@ -122,8 +125,8 @@ func prepare_ui_components() -> void:
 	smart_select_clear_btn.pressed.connect(_on_smart_select_clear_pressed)
 	GlobalUtil.apply_button_theme(smart_select_clear_btn, "Clear", GlobalConstants.BUTTOM_CONTEXT_UI_SIZE)
 
-	sculp_mode_btn.pressed.connect(_on_sculp_mode_btn_pressed)
-	GlobalUtil.apply_button_theme(sculp_mode_btn, "Sculpt", GlobalConstants.BUTTOM_CONTEXT_UI_SIZE)
+	# sculp_mode_btn.pressed.connect(_on_sculp_mode_btn_pressed)
+	# GlobalUtil.apply_button_theme(sculp_mode_btn, "Sculpt", GlobalConstants.BUTTOM_CONTEXT_UI_SIZE)
 
 	var ui_scale: float = GlobalUtil.get_editor_ui_scale()
 
@@ -151,6 +154,11 @@ func prepare_ui_components() -> void:
 	mesh_mode_dropdown.item_selected.connect(_on_mesh_mode_selected)
 	mesh_mode_depth_spin_box.value_changed.connect(_on_mesh_mode_depth_changed)
 
+	#Sculp Mode controls
+	sculp_brush_dropdown.item_selected.connect(_on_sculp_brush_selected)
+	sculpt_brush_size_hslider.value_changed.connect(_on_sculpt_brush_size_changed)
+
+	#Auto Tile Controls
 	auto_tile_mode_dropdown.item_selected.connect(_on_auto_tile_mode_selected)
 	auto_tile_detph_spin_box.value_changed.connect(_on_auto_tile_depth_changed)
 
@@ -204,6 +212,8 @@ func sync_from_settings(tilemap_settings: TileMapLayerSettings) -> void:
 	mesh_mode_depth_spin_box.value = tilemap_settings.current_depth_scale
 	auto_tile_mode_dropdown.selected = tilemap_settings.autotile_mesh_mode
 	auto_tile_detph_spin_box.value = tilemap_settings.autotile_depth_scale
+	sculp_brush_dropdown.selected = tilemap_settings.sculpt_brush_type
+	sculpt_brush_size_hslider.value = tilemap_settings.sculpt_brush_size
 
 
 	# Sync visibility from mode + smart select state
@@ -340,6 +350,16 @@ func _on_smart_select_delete_pressed() -> void:
 func _on_smart_select_clear_pressed():
 	smart_select_operation_btn_pressed.emit(GlobalConstants.SmartSelectionOperation.CLEAR)
 
-func _on_sculp_mode_btn_pressed():
-	print("Sculp mode button pressed")
-	sculp_mode_btn_pressed.emit()
+# func _on_sculp_mode_btn_pressed():
+# 	print("Sculp mode button pressed")
+# 	sculp_mode_btn_pressed.emit()
+
+func _on_sculp_brush_selected(index: int) -> void:
+	# print("Sculp brush type selected index: ", index)
+	sculp_brush_changed.emit(sculp_brush_dropdown.get_selected_id(), sculpt_brush_size_hslider.value)
+
+func _on_sculpt_brush_size_changed(value: float) -> void:
+	# print("Sculp brush size changed: ", value)
+	sculp_brush_changed.emit(sculp_brush_dropdown.get_selected_id(), sculpt_brush_size_hslider.value)
+
+
