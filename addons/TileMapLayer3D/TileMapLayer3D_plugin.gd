@@ -2259,7 +2259,7 @@ func is_smart_select_mode() -> bool:
 ## Called when the sculpt brush Stage 2 completes — builds 3D volume and places tiles.
 ## Coordinate system: base_y is in GRID coordinates (from _raycast_to_cursor_plane).
 ## raise_amount is in WORLD units. Tile positions derived from reference scene level_01.tscn.
-func _on_sculpt_volume_committed(cells: Dictionary, base_y: float, raise_amount: float, gs: float, no_base_floor: bool = false) -> void:
+func _on_sculpt_volume_committed(cells: Dictionary, base_y: float, raise_amount: float, gs: float, no_base_floor: bool = false, no_base_ceiling: bool = false) -> void:
 	if not current_tile_map3d or not placement_manager:
 		return
 
@@ -2279,12 +2279,13 @@ func _on_sculpt_volume_committed(cells: Dictionary, base_y: float, raise_amount:
 	var tile_list: Array[Dictionary] = []
 	var depth: float = current_tile_map3d.settings.current_depth_scale if current_tile_map3d.settings else 0.1
 
-	## --- 1. TOP FLOOR — diamond shape with triangle edges ---
-	for cell: Vector2i in cells:
-		var cell_type: int = cells[cell]
-		var mapping: Vector2i = GlobalConstants.SCULPT_CELL_TO_TILE[cell_type]
-		_sculpt_add_tile(tile_list, Vector3(float(cell.x), top_floor_y, float(cell.y)),
-			0, mapping.x, mapping.y, uv_rect, depth)
+	## --- 1. TOP FLOOR / CEILING — diamond shape with triangle edges (skipped when no_base_ceiling) ---
+	if not no_base_ceiling:
+		for cell: Vector2i in cells:
+			var cell_type: int = cells[cell]
+			var mapping: Vector2i = GlobalConstants.SCULPT_CELL_TO_TILE[cell_type]
+			_sculpt_add_tile(tile_list, Vector3(float(cell.x), top_floor_y, float(cell.y)),
+				0, mapping.x, mapping.y, uv_rect, depth)
 
 	## --- 2. BOTTOM FLOOR — same diamond shape (skipped when no_base_floor) ---
 	if not no_base_floor:

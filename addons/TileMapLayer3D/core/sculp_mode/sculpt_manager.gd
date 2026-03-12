@@ -11,13 +11,16 @@ enum SculptState {
 
 ## Emitted when Stage 2 completes with a meaningful height delta.
 ## Plugin connects this to place tiles from the committed pattern.
-signal volume_committed(cells: Dictionary, base_y: float, raise_amount: float, grid_size: float, no_base_floor: bool)
+signal volume_committed(cells: Dictionary, base_y: float, raise_amount: float, grid_size: float, no_base_floor: bool, no_base_ceiling: bool)
 
 var state: SculptState = SculptState.IDLE
 
 ## When true, the bottom floor tiles are skipped — volume is open-ended at the base.
 ## Useful when sculpting on an existing floor to avoid overlapping tiles.
 var no_base_floor: bool = true
+
+## When true, the top ceiling tiles are skipped — volume is open-ended at the top.
+var no_base_ceiling: bool = true
 
 # --- Brush position state ---
 
@@ -154,7 +157,7 @@ func on_mouse_release() -> void:
 		SculptState.SETTING_HEIGHT:
 			var raise: float = get_raise_amount()
 			if abs(raise) > 0.001:
-				volume_committed.emit(drag_pattern.duplicate(), drag_anchor_world_pos.y, raise, grid_size, no_base_floor)
+				volume_committed.emit(drag_pattern.duplicate(), drag_anchor_world_pos.y, raise, grid_size, no_base_floor, no_base_ceiling)
 			state = SculptState.IDLE
 			drag_pattern.clear()
 			drag_delta_y = 0.0
