@@ -386,7 +386,6 @@ func rebuild_brush_shape_template() -> void:
 		_:
 			_shape_diamond()
 		
-	print("Rebuilt brush template for type ", brush_type, " size ", brush_size, " with ", _brush_template.size(), " cells for TileMapLayer: ", _active_tilema3d_node)
 
 func _shape_square() -> void:
 	for dz in range(-brush_size, brush_size + 1):

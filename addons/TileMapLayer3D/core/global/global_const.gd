@@ -615,7 +615,7 @@ enum MainAppMode {
 	MANUAL = 0,
 	AUTOTILE = 1,
 	SETTINGS = 2,
-	SMART_SELECT = 3,
+	SMART_OPERATIONS = 3,
 	ANIMATED_TILES = 4,
 	SCULPT = 5
 }
@@ -628,14 +628,20 @@ enum TilSetTab {
 
 }
 
-## Determines the SmartSelection feature mode
+## Smart Operations is the Top Level hyerarchy. Smart Selecct and Smart Fill are child modes 
+enum SmartOperationsMainMode {
+	SMART_SELECT = 0, # Handles the selection Mode options
+	SMART_FILL = 1, # Handles teh Fill Mode options
+}
+
+## Determines the SmartSelection feature mode (Child of Smart Operations)
 enum SmartSelectionMode {
 	SINGLE_PICK = 0, # Pick tiles individually - Additive selection
 	CONNECTED_UV = 1, # Smart Selection of all neighbours that share the same UV - Tile Texture
 	CONNECTED_NEIGHBOR = 2, # Smart Selection of all neighbours on the same plane and rotation
-	SMART_FILL = 3, # Two-click surface fill: click start tile, click end tile, fill gap
 }
 
+## Determines the SmartFill feature mode (Child of Smart Operations)
 enum SmartFillMode {
 	FILL_RAMP = 0, # Fills Ramps
 	FILL_GAP = 1, # Fills Gaps

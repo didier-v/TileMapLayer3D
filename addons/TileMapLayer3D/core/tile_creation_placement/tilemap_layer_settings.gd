@@ -221,7 +221,14 @@ extends Resource
 			sculpt_brush_size = value
 			emit_changed()
 
-@export_group("Smart Select")
+@export_group("Smart Operations")
+
+## Main mode for Smart Operations (Enum defined in Global Constants)
+@export var smart_operations_main_mode: GlobalConstants.SmartOperationsMainMode = GlobalConstants.SmartOperationsMainMode.SMART_FILL:
+	set(value):
+		if smart_operations_main_mode != value:
+			smart_operations_main_mode = value
+			emit_changed()
 
 ## Determines if the feature smart_select is active or not
 @export var is_smart_select_active: bool = false:
@@ -360,6 +367,7 @@ func duplicate_settings() -> TileMapLayerSettings:
 	new_settings.current_depth_scale = current_depth_scale
 	new_settings.autotile_depth_scale = autotile_depth_scale
 	new_settings.texture_repeat_mode = texture_repeat_mode
+	new_settings.smart_operations_main_mode = smart_operations_main_mode
 	new_settings.is_smart_select_active = is_smart_select_active
 	new_settings.smart_select_mode = smart_select_mode
 	new_settings.smart_fill_mode = smart_fill_mode
@@ -404,6 +412,7 @@ func copy_from(other: TileMapLayerSettings) -> void:
 	current_depth_scale = other.current_depth_scale
 	autotile_depth_scale = other.autotile_depth_scale
 	texture_repeat_mode = other.texture_repeat_mode
+	smart_operations_main_mode = other.smart_operations_main_mode
 	is_smart_select_active = other.is_smart_select_active
 	smart_select_mode = other.smart_select_mode
 	smart_fill_mode = other.smart_fill_mode

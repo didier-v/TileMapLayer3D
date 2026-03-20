@@ -12,7 +12,7 @@ func _redraw() -> void:
 	
 	if gizmo_plugin._active_tilema3d_node:
 		match gizmo_plugin._active_tilema3d_node.settings.main_app_mode:
-			GlobalConstants.MainAppMode.SMART_SELECT:
+			GlobalConstants.MainAppMode.SMART_OPERATIONS:
 					# Smart Fill preview (independent of sculpt mode).
 					_draw_smart_fill_preview(gizmo_plugin)
 			

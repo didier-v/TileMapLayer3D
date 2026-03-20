@@ -147,6 +147,7 @@ func _enter_tree() -> void:
 	editor_ui._context_toolbar.autotile_mesh_mode_changed.connect(_on_autotile_mesh_mode_changed)
 	editor_ui._context_toolbar.autotile_depth_changed.connect(_on_autotile_depth_changed)
 
+	editor_ui._context_toolbar.smart_operations_mode_changed.connect(_on_smart_operations_mode_changed)
 	editor_ui.smart_select_mode_changed.connect(_on_smart_select_mode_changed)
 	editor_ui._context_toolbar.sculp_brush_changed.connect(_on_sculp_mode_brush_changed)
 	editor_ui._context_toolbar.smart_fill_changed.connect(_on_smart_fill_changed)
@@ -660,7 +661,7 @@ func _handle_mouse_painting_movement(event: InputEvent, camera: Camera3D) -> voi
 
 	# SMART FILL: Update preview on mouse move via pick_tile_at().
 	# Must use full raycast — tiles can be at any height (slopes, ramps).
-	if is_smart_select_mode() and _smart_fill_manager and _smart_fill_manager.state == SmartFillManager.SmartFillState.START_SET:
+	if is_smart_fill_mode() and _smart_fill_manager and _smart_fill_manager.state == SmartFillManager.SmartFillState.START_SET:
 		if current_time - _last_paint_update_time >= GlobalConstants.PAINT_UPDATE_INTERVAL:
 			var sf_result: Dictionary = SmartSelectManager.pick_tile_at(camera, event.position, current_tile_map3d)
 			if not sf_result.is_empty():
@@ -710,45 +711,38 @@ func _handle_mouse_button_press(event: InputEvent, camera: Camera3D) -> int:
 		return AFTER_GUI_INPUT_PASS
 
 
-	# SMART SELECT MODE SECTION (only on press, not release — prevents double-fire)
-	if event.pressed and is_smart_select_mode():
-		## 1 - Smart Fill: Handle Width Changes first
-		#TODO: WHEEL iS BROKEN as we CANNOT OVERRIED OR STOP INPUT FROM EDITOR ZOOM
-		#BUG : REMOVE/FIX the if is_wheel_down or is_wheel_up LOGIC to another shortcut
-		if is_wheel_down or is_wheel_up:
-			if _smart_fill_manager.state ==SmartFillManager.SmartFillState.START_SET:
-				var current_width: int = current_tile_map3d.settings.smart_fill_width
-				if current_tile_map3d and current_width >= 0:
-					current_width = max(1, current_width + (1 if is_wheel_up else -1))
-					current_tile_map3d.settings.smart_fill_width = current_width
-	
-					print("Wheel down or up: ", is_wheel_down, " / ", is_wheel_up, " - width: ", current_tile_map3d.settings.smart_fill_width)
-					
-					editor_ui._context_toolbar.sync_from_settings(current_tile_map3d.settings)
-					current_tile_map3d.update_gizmos()
-			
-			return AFTER_GUI_INPUT_STOP
-			
-
+	# SMART SELECT MODE SECTION 
+	if event.pressed and is_smart_operations_mode():
+		if is_smart_fill_mode():
+			## 1 - Smart Fill: Handle Width Changes first
+			#TODO: WHEEL iS BROKEN as we CANNOT OVERRIED OR STOP INPUT FROM EDITOR ZOOM
+			#BUG : REMOVE/FIX the if is_wheel_down or is_wheel_up LOGIC to another shortcut
+			if is_wheel_down or is_wheel_up:
+				if _smart_fill_manager.state ==SmartFillManager.SmartFillState.START_SET:
+					var current_width: int = current_tile_map3d.settings.smart_fill_width
+					if current_tile_map3d and current_width >= 0:
+						current_width = max(1, current_width + (1 if is_wheel_up else -1))
+						current_tile_map3d.settings.smart_fill_width = current_width
 		
-		## 2 - Smart Fill: RMB cancels start selection.
-		if is_right and current_tile_map3d.settings.smart_select_mode == GlobalConstants.SmartSelectionMode.SMART_FILL:
-			if _smart_fill_manager:
-				_smart_fill_manager.reset()
-				current_tile_map3d.clear_highlights()
-				current_tile_map3d.update_gizmos()
+						editor_ui._context_toolbar.sync_from_settings(current_tile_map3d.settings)
+						current_tile_map3d.update_gizmos()
+				# Always consume wheel events in smart fill mode to prevent editor zoom
 				return AFTER_GUI_INPUT_STOP
-		## 3 - Smart Fill: Main Operation Handleing with Left Click
-		if is_left:
-			## TODO: SMART FILL RAMP_FILL: Smart Fill: two-click workflow with live preview.
-			if current_tile_map3d.settings.smart_select_mode == GlobalConstants.SmartSelectionMode.SMART_FILL:
-				#Smart Fill - FILL RAMP MODE
+
+			## 2 - Smart Fill: RMB cancels start selection.
+			if is_right:
+				if _smart_fill_manager:
+					_smart_fill_manager.reset()
+					current_tile_map3d.clear_highlights()
+					current_tile_map3d.update_gizmos()
+					return AFTER_GUI_INPUT_STOP
+
+			## 3 - Smart Fill: Main Operation Handling with Left Click
+			if is_left:
 				if current_tile_map3d.settings.smart_fill_mode == GlobalConstants.SmartFillMode.FILL_RAMP:
 					if _smart_fill_manager:
 						var result: Dictionary = SmartSelectManager.pick_tile_at(camera, event.position, current_tile_map3d)
-						print("State = ", _smart_fill_manager.state)
-						
-						#IF IDLE - We are not doing any operation yet
+
 						match _smart_fill_manager.state:
 							SmartFillManager.SmartFillState.IDLE:
 								if not result.is_empty():
@@ -758,7 +752,7 @@ func _handle_mouse_button_press(event: InputEvent, camera: Camera3D) -> int:
 									current_tile_map3d.update_gizmos()
 								
 							SmartFillManager.SmartFillState.START_SET:
-								if not result.is_empty():
+								if not result.is_empty() and result["tile_key"] != _smart_fill_manager.start_tile_key:
 									#Mode state transition to END_SET and pass data of final tile
 									_smart_fill_manager.set_end(result["tile_data"], result["tile_key"], current_tile_map3d.settings.grid_size)
 
@@ -766,44 +760,20 @@ func _handle_mouse_button_press(event: InputEvent, camera: Camera3D) -> int:
 									_smart_fill_manager._execute_smart_fill_ramp( self)
 									_smart_fill_manager.reset()
 									current_tile_map3d.clear_highlights()
-									current_tile_map3d.update_gizmos()									
-							
-							# SmartFillManager.SmartFillState.END_SET:
-							# 	if not result.is_empty():
-							# 		# _smart_fill_manager.enter_width_update()
-
-							# 		_smart_fill_manager._execute_smart_fill_ramp( self)
-							# 		_smart_fill_manager.reset()
-							# 		current_tile_map3d.clear_highlights()
-							# 		current_tile_map3d.update_gizmos()
-
-
-
-							# #TODO: Add new STATE for "WIDTH CHANGE"
-							# #ADD the END of WIDTH CHANGE, we change STATE to END_SET to allow the placement ot take place
-							# # Need to update _execute_smart_fill_ramp to consider the "WIDTH" in it's calcualtion and adjust the position to the original position
-							# SmartFillManager.SmartFillState.WIDTH_UPDATE:
-							# 	if not result.is_empty():
-							# 		# _smart_fill_manager.set_width()
-							# 		current_tile_map3d.update_gizmos()
-						
-
-							# SmartFillManager.SmartFillState.WIDTH_SET:
-							# 	if not result.is_empty():
-							# 		#Execute the Smart fill Ramp Mode. 
-							# 		_smart_fill_manager._execute_smart_fill_ramp( self)
-							# 		_smart_fill_manager.reset()
-							# 		current_tile_map3d.clear_highlights()
-							# 		current_tile_map3d.update_gizmos()
-							
-					
+									current_tile_map3d.update_gizmos()										
 					return AFTER_GUI_INPUT_STOP
 
+		if is_smart_select_mode():
+			## RMB clears the current smart selection
+			if is_right:
+				current_tile_map3d.clear_highlights()
+				current_tile_map3d.smart_selected_tiles.clear()
+				return AFTER_GUI_INPUT_STOP
 
+			## LMB: Standard smart select modes below.
+			if not is_left:
+				return AFTER_GUI_INPUT_PASS
 
-
-			## TODO: SMART FILL - REGULAR MODE??
-			## Standard smart select modes below.
 			var result: Dictionary = SmartSelectManager.pick_tile_at(camera, event.position, current_tile_map3d)
 
 			if result.is_empty():
@@ -932,7 +902,7 @@ func _update_preview(camera: Camera3D, screen_pos: Vector2, force_update: bool =
 		return
 
 	# Skip paint preview during smart select — highlights are managed by the smart select handler
-	if current_tile_map3d and current_tile_map3d.settings.is_smart_select_active:
+	if current_tile_map3d and is_smart_select_mode():
 		tile_preview.hide_preview()
 		return
 
@@ -1758,6 +1728,21 @@ func _on_sculp_mode_brush_changed(brush_type: GlobalConstants.SculptBrushType, b
 		_sculpt_manager.rebuild_brush_shape_template()
 		print("Sculpt brush changed - Type: ", brush_type, " Size: ", brush_size)
 
+func _on_smart_operations_mode_changed(mode: GlobalConstants.SmartOperationsMainMode) -> void:
+	if current_tile_map3d:
+		current_tile_map3d.settings.smart_operations_main_mode = mode
+		current_tile_map3d.update_gizmos()
+	
+	match mode:
+		GlobalConstants.SmartOperationsMainMode.SMART_FILL:
+			if editor_ui:
+				editor_ui.clear_smart_selection()
+		GlobalConstants.SmartOperationsMainMode.SMART_SELECT:
+			if _smart_fill_manager:
+				_smart_fill_manager.reset()
+			if current_tile_map3d:
+				current_tile_map3d.clear_highlights()
+		
 
 func _on_smart_select_mode_changed(is_smart_select_on: bool, smart_mode: GlobalConstants.SmartSelectionMode) -> void:
 	# Clear highlights when exiting smart select mode
@@ -1768,7 +1753,7 @@ func _on_smart_select_mode_changed(is_smart_select_on: bool, smart_mode: GlobalC
 		_smart_fill_manager.reset()
 	
 	#Update settings to confirm smart select mode
-	if current_tile_map3d.settings.is_smart_select_active != null:
+	if current_tile_map3d and current_tile_map3d.settings:
 		current_tile_map3d.settings.is_smart_select_active = is_smart_select_on
 
 		if smart_mode != current_tile_map3d.settings.smart_select_mode:
@@ -2083,6 +2068,12 @@ func _on_tilemap_main_mode_changed(mode: GlobalConstants.MainAppMode) -> void:
 	if _smart_fill_manager and current_tile_map3d:
 		_smart_fill_manager.reset()
 		current_tile_map3d.update_gizmos()
+
+	# Clear smart select state when leaving SMART_OPERATIONS mode
+	if current_tile_map3d:
+		current_tile_map3d.settings.is_smart_select_active = false
+		current_tile_map3d.smart_selected_tiles.clear()
+		current_tile_map3d.clear_highlights()
 
 	# Write to settings (single source of truth)
 	_set_tiling_mode_to_settings(mode)
@@ -2404,6 +2395,10 @@ func _on_sculpt_tiles_created(tile_list: Array[Dictionary]) -> void:
 	undo_redo.add_undo_method(self, "_undo_sculpt_place_tiles", tile_list)
 	undo_redo.commit_action()
 
+	# Refresh gizmo to clear sculpt brush preview after tile placement
+	if current_tile_map3d:
+		current_tile_map3d.update_gizmos()
+
 
 ## Batch-places sculpt tiles with correct mesh_mode per tile.
 ## Wraps in begin/end_batch_update to avoid per-tile GPU sync.
@@ -2459,9 +2454,19 @@ func _is_animated_tile_mod() -> bool:
 		return current_tile_map3d.settings.main_app_mode == GlobalConstants.MainAppMode.ANIMATED_TILES
 	return false
 
+func is_smart_operations_mode() -> bool:
+	if current_tile_map3d and current_tile_map3d.settings:
+		return current_tile_map3d.settings.main_app_mode == GlobalConstants.MainAppMode.SMART_OPERATIONS
+	return false
+
 func is_smart_select_mode() -> bool:
 	if current_tile_map3d and current_tile_map3d.settings:
-		return current_tile_map3d.settings.main_app_mode == GlobalConstants.MainAppMode.SMART_SELECT
+		return current_tile_map3d.settings.smart_operations_main_mode == GlobalConstants.SmartOperationsMainMode.SMART_SELECT
+	return false
+
+func is_smart_fill_mode() -> bool:
+	if current_tile_map3d and current_tile_map3d.settings:
+		return current_tile_map3d.settings.smart_operations_main_mode == GlobalConstants.SmartOperationsMainMode.SMART_FILL
 	return false
 
 func _is_sculpting_mode() -> bool:

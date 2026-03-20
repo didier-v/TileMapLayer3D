@@ -54,7 +54,7 @@ func prepare_ui_components() -> void:
 
 	GlobalUtil.apply_button_theme(manual_tile_button, "BitMap", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
 	GlobalUtil.apply_button_theme(auto_tile_button, "TileSet", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
-	GlobalUtil.apply_button_theme(smart_select_button, "EditPivot", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
+	GlobalUtil.apply_button_theme(smart_select_button, "PluginScript", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
 	GlobalUtil.apply_button_theme(settings_button, "Tools", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
 	GlobalUtil.apply_button_theme(animated_tiles_button, "Animation", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
 	GlobalUtil.apply_button_theme(sculp_tiles_button, "TexturePreviewChannels", GlobalConstants.BUTTOM_MAIN_UI_SIZE)
@@ -75,7 +75,7 @@ func sync_from_settings(tilemap_settings: TileMapLayerSettings) -> void:
 			manual_tile_button.button_pressed = true
 		GlobalConstants.MainAppMode.AUTOTILE:
 			auto_tile_button.button_pressed = true
-		GlobalConstants.MainAppMode.SMART_SELECT:
+		GlobalConstants.MainAppMode.SMART_OPERATIONS:
 			smart_select_button.button_pressed = true
 		GlobalConstants.MainAppMode.ANIMATED_TILES:
 			animated_tiles_button.button_pressed = true
@@ -133,7 +133,7 @@ func _on_smartselect_button_toggled(pressed: bool) -> void:
 	if _updating_ui:
 		return
 	if pressed:
-		main_toolbar_mode_changed.emit(GlobalConstants.MainAppMode.SMART_SELECT, true)
+		main_toolbar_mode_changed.emit(GlobalConstants.MainAppMode.SMART_OPERATIONS, true)
 
 func _on_auto_button_toggled(pressed: bool) -> void:
 	if _updating_ui:

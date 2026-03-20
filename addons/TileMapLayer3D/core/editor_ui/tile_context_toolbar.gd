@@ -34,6 +34,9 @@ signal autotile_depth_changed(depth: float)
 ## Emitted when Sculpt Mode Brush changed (Size and Type)
 signal sculp_brush_changed(brush_type: GlobalConstants.SculptBrushType, brush_size: float)
 
+signal smart_operations_mode_changed(smart_mode: GlobalConstants.SmartOperationsMainMode)
+
+
 signal smart_fill_changed(fill_mode: int, width: float, fill_direction: int)
 
 
@@ -41,9 +44,13 @@ signal smart_fill_changed(fill_mode: int, width: float, fill_direction: int)
 
 ## Main UI Node Groups to show/hide based on mode
 @onready var manual_mode_group: FlowContainer = %ManualModeGroup
-@onready var smart_operations_group: HBoxContainer = %SmartOperationtGroup
 @onready var auto_tile_mode_group: FlowContainer = %AutoTileModeGroup
 @onready var sculp_mode_group: HBoxContainer = %SculpModeGroup
+
+#smart operations groups
+@onready var smart_operations_group: HBoxContainer = %SmartOperationtGroup
+@onready var smart_select_group: HBoxContainer = %SmartSelectGroup
+@onready var smart_fill_group: HBoxContainer = %SmartFillGroup
 
 ## Rotate Right button (Q)
 @onready var _rotate_right_btn: Button = %RotateRightBtn
@@ -58,7 +65,10 @@ signal smart_fill_changed(fill_mode: int, width: float, fill_direction: int)
 ## Status label
 @onready var _status_label: Label = %StatusLabel
 
-@onready var smart_mode_option_btn: OptionButton = %SmartSelectionModeOptBtn
+
+@onready var smart_operation_opt_btn: OptionButton = %SmartOperationOptBtn
+#Smart Select Controls
+@onready var smart_select_mode_option_btn: OptionButton = %SmartSelectionModeOptBtn
 @onready var smart_select_replace_btn: Button = %SmartSelectReplaceBtn
 @onready var smart_select_delete_btn: Button = %SmartSelectDeleteBtn
 @onready var smart_select_clear_btn: Button = %SmartSelectClearBtn
@@ -134,9 +144,13 @@ func prepare_ui_components() -> void:
 
 	var ui_scale: float = GlobalUtil.get_editor_ui_scale()
 
-	smart_mode_option_btn.item_selected.connect(_on_smart_select_mode_changed)
-	smart_mode_option_btn.add_theme_font_size_override("font_size", int(10 * ui_scale))
-	smart_mode_option_btn.custom_minimum_size.x = 115 * ui_scale
+	smart_operation_opt_btn.item_selected.connect(on_smart_operations_dropdown_changed)
+	smart_operation_opt_btn.add_theme_font_size_override("font_size", int(10 * ui_scale))
+	smart_operation_opt_btn.custom_minimum_size.x = GlobalConstants.BUTTOM_CONTEXT_UI_SIZE * ui_scale
+
+	smart_select_mode_option_btn.item_selected.connect(_on_smart_select_mode_changed)
+	smart_select_mode_option_btn.add_theme_font_size_override("font_size", int(10 * ui_scale))
+	smart_select_mode_option_btn.custom_minimum_size.x = 115 * ui_scale
 
 	# --- Status Label ---
 	_status_label.text = "0°"
@@ -222,7 +236,7 @@ func sync_from_settings(tilemap_settings: TileMapLayerSettings) -> void:
 	_updating_ui = true
 
 	# UI Items to sync:
-	smart_mode_option_btn.select(tilemap_settings.smart_select_mode)
+	smart_select_mode_option_btn.select(tilemap_settings.smart_select_mode)
 
 	mesh_mode_dropdown.selected = tilemap_settings.mesh_mode
 	mesh_mode_depth_spin_box.value = tilemap_settings.current_depth_scale
@@ -230,6 +244,8 @@ func sync_from_settings(tilemap_settings: TileMapLayerSettings) -> void:
 	auto_tile_detph_spin_box.value = tilemap_settings.autotile_depth_scale
 	sculp_brush_dropdown.selected = tilemap_settings.sculpt_brush_type
 	sculpt_brush_size_hslider.value = tilemap_settings.sculpt_brush_size
+
+	smart_operation_opt_btn.selected = tilemap_settings.smart_operations_main_mode
 
 	smart_fill_mode_opt_btn.selected = tilemap_settings.smart_fill_mode
 	smart_fill_width_spin_box.value = tilemap_settings.smart_fill_width
@@ -250,7 +266,7 @@ func sync_from_settings(tilemap_settings: TileMapLayerSettings) -> void:
 			auto_tile_mode_group.visible = true
 			sculp_mode_group.visible = false
 			self.visible = true
-		GlobalConstants.MainAppMode.SMART_SELECT:
+		GlobalConstants.MainAppMode.SMART_OPERATIONS:
 			manual_mode_group.visible = false
 			smart_operations_group.visible = true
 			auto_tile_mode_group.visible = false
@@ -279,7 +295,8 @@ func sync_from_settings(tilemap_settings: TileMapLayerSettings) -> void:
 			sculp_mode_group.visible = true
 
 			self.visible = true
-
+		
+	on_smart_operations_dropdown_changed(tilemap_settings.smart_operations_main_mode)
 	_updating_ui = false
 
 
@@ -348,11 +365,23 @@ func _on_auto_tile_depth_changed(value: float) -> void:
 
 	autotile_depth_changed.emit(value)
 
+func on_smart_operations_dropdown_changed(index_mode: int) -> void:
+	smart_operations_mode_changed.emit(index_mode)
+
+	smart_select_group.visible = false
+	smart_fill_group.visible = false
+	match index_mode:
+		GlobalConstants.SmartOperationsMainMode.SMART_FILL:
+			smart_fill_group.visible = true
+		GlobalConstants.SmartOperationsMainMode.SMART_SELECT:
+			smart_select_group.visible = true
+
+
 func _on_smart_select_mode_changed(mode: GlobalConstants.SmartSelectionMode) -> void:
 	if _updating_ui:
 		return
 	
-	smart_select_dropdown_changed.emit(smart_mode_option_btn.get_selected_id())
+	smart_select_dropdown_changed.emit(smart_select_mode_option_btn.get_selected_id())
 	# print("Smart Select mode changed - Mode is: ", mode)
 
 
