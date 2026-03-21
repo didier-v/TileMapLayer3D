@@ -746,6 +746,8 @@ func _add_tile_to_multimesh(
 	var instance_index: int = chunk.multimesh.visible_instance_count
 
 	var transform: Transform3D
+
+	## 1. Custom Transform Path - Used for Smart Fill and Smart Operations 
 	if p_custom_transform != Transform3D():
 		## Smart fill path: use pre-computed world-space transform, convert to chunk-local.
 		var chunk_origin: Vector3 = Vector3(
@@ -755,8 +757,10 @@ func _add_tile_to_multimesh(
 		)
 		transform = p_custom_transform
 		transform.origin -= chunk_origin
+		if is_face_flipped:
+			transform.basis = transform.basis * Basis.from_scale(Vector3(1, 1, -1))
+	## 2. Normal path: compute transform from orientation/tilt params.
 	else:
-		## Normal path: compute transform from orientation/tilt params.
 		var local_world_pos: Vector3 = GlobalUtil.world_to_local_grid_pos(world_pos, chunk.region_key)
 		var local_grid_pos: Vector3 = GlobalUtil.world_to_grid(local_world_pos, grid_size)
 		var actual_depth: float = p_depth_scale if p_depth_scale >= 0.0 else current_depth_scale

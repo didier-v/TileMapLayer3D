@@ -1,10 +1,6 @@
 class_name SmartFillManager
 extends RefCounted
 
-## Two-click surface fill with live preview.
-## Step 1: Visual feedback only — no tiles generated.
-## State is read by TileMapLayerGizmo._redraw() for rendering.
-
 enum SmartFillState {
 	IDLE,       ## No interaction
 	START_SET,  ## Start tile selected, showing preview on mouse move
@@ -95,7 +91,8 @@ func _execute_smart_fill_ramp(plugin: EditorPlugin) -> void:
 
 	## Use base orientation for columnar storage (flat orientation, no tilt params).
 	var orientation: int = base_orientation
-	var is_flipped: bool = placement_manager.is_current_face_flipped
+	# var is_flipped: bool = placement_manager.is_current_face_flipped
+	var is_flipped: bool = _active_tilema3d_node.settings.smart_fill_flip_face
 	var mesh_mode: int = _active_tilema3d_node.current_mesh_mode
 	var depth_scale: float = placement_manager.current_depth_scale
 	var texture_repeat: int = placement_manager.current_texture_repeat_mode

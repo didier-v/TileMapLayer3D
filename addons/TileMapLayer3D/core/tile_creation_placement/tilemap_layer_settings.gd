@@ -268,6 +268,12 @@ extends Resource
 			smart_fill_quad_growth_dir = value
 			emit_changed()
 
+@export var smart_fill_flip_face: bool = false:
+	set(value):
+		if smart_fill_flip_face != value:
+			smart_fill_flip_face = value
+			emit_changed()
+
 # EDITOR STATE
 @export_group("Editor State")
 

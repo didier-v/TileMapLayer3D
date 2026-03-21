@@ -395,7 +395,6 @@ func _rebuild_chunks_from_saved_data(force_mesh_rebuild: bool = false) -> void:
 		# else: use defaults (depth_scale stays 1.0 for old tiles)
 
 		# Convert grid to world for correct region calculation
-		# CRITICAL: chunk regions are 50x50x50 WORLD units, not grid units!
 		var world_position: Vector3 = GlobalUtil.grid_to_world(grid_position, grid_size)
 		var chunk: MultiMeshTileChunkBase = get_or_create_chunk(mesh_mode, texture_repeat_mode, world_position)
 		var instance_index: int = chunk.multimesh.visible_instance_count
@@ -403,6 +402,8 @@ func _rebuild_chunks_from_saved_data(force_mesh_rebuild: bool = false) -> void:
 		# Check for custom transform (smart fill sloped tiles) via Dictionary lookup
 		var tile_key_rebuild: int = GlobalUtil.make_tile_key(grid_position, orientation)
 		var transform: Transform3D
+
+		## rebuild path 1 with custom transform, used by Smart Fill (does not maintaing Grid Alignment)
 		if _tile_custom_transforms.has(tile_key_rebuild):
 			# Use stored world-space transform, convert origin to chunk-local
 			transform = _tile_custom_transforms[tile_key_rebuild]
@@ -412,6 +413,10 @@ func _rebuild_chunks_from_saved_data(force_mesh_rebuild: bool = false) -> void:
 				float(chunk.region_key.z) * GlobalConstants.CHUNK_REGION_SIZE
 			)
 			transform.origin -= chunk_origin
+			if is_face_flipped:
+				transform.basis = transform.basis * Basis.from_scale(Vector3(1, 1, -1))
+
+		## rebuild path 2 (Standard) used by all other modes and perfect Grid Alignment
 		else:
 			# Get local world position, then convert back to local grid for transform
 			# build_tile_transform expects GRID coordinates, then internally converts to world

@@ -37,7 +37,7 @@ signal sculp_brush_changed(brush_type: GlobalConstants.SculptBrushType, brush_si
 signal smart_operations_mode_changed(smart_mode: GlobalConstants.SmartOperationsMainMode)
 
 
-signal smart_fill_changed(fill_mode: int, width: float, fill_direction: int)
+signal smart_fill_changed(fill_mode: int, width: float, fill_direction: int, flip_face: bool)
 
 
 # --- Member Variables ---
@@ -76,6 +76,7 @@ signal smart_fill_changed(fill_mode: int, width: float, fill_direction: int)
 @onready var smart_fill_mode_opt_btn: OptionButton = %SmartFillModeOptBtn
 @onready var smart_fill_width_spin_box: SpinBox = %SmartFillWidthSpinBox
 @onready var smart_fill_direction_opt_btn: OptionButton = %SmartFillDirectionOptBtn
+@onready var smart_fill_face_flip_check_box: CheckBox = %SmartFillFaceFlipCheckBox
 
 @onready var mesh_mode_dropdown: OptionButton = %MeshModeDropdown
 @onready var mesh_mode_depth_spin_box: SpinBox = %MeshModeDepthSpinBox
@@ -150,7 +151,7 @@ func prepare_ui_components() -> void:
 
 	smart_select_mode_option_btn.item_selected.connect(_on_smart_select_mode_changed)
 	smart_select_mode_option_btn.add_theme_font_size_override("font_size", int(10 * ui_scale))
-	smart_select_mode_option_btn.custom_minimum_size.x = 115 * ui_scale
+	smart_select_mode_option_btn.custom_minimum_size.x = GlobalConstants.BUTTOM_CONTEXT_UI_SIZE * ui_scale
 
 	# --- Status Label ---
 	_status_label.text = "0°"
@@ -182,15 +183,17 @@ func prepare_ui_components() -> void:
 
 	#Smart Fill Controls
 	smart_fill_mode_opt_btn.item_selected.connect(
-		func (index: int): _on_smart_fill_mode_changed(smart_fill_mode_opt_btn.get_selected_id(), smart_fill_width_spin_box.value, smart_fill_direction_opt_btn.get_selected_id()))
+		func (index: int): _on_smart_fill_mode_changed(smart_fill_mode_opt_btn.get_selected_id(), smart_fill_width_spin_box.value, smart_fill_direction_opt_btn.get_selected_id(), smart_fill_face_flip_check_box.button_pressed))
 
 	smart_fill_width_spin_box.value_changed.connect(
-		func (value: float): _on_smart_fill_mode_changed(smart_fill_mode_opt_btn.get_selected_id(), smart_fill_width_spin_box.value, smart_fill_direction_opt_btn.get_selected_id()))
+		func (value: float): _on_smart_fill_mode_changed(smart_fill_mode_opt_btn.get_selected_id(), smart_fill_width_spin_box.value, smart_fill_direction_opt_btn.get_selected_id(), smart_fill_face_flip_check_box.button_pressed))
 
 	smart_fill_direction_opt_btn.item_selected.connect(
-		func (index: int): _on_smart_fill_mode_changed(smart_fill_mode_opt_btn.get_selected_id(), smart_fill_width_spin_box.value, smart_fill_direction_opt_btn.get_selected_id()))
+		func (index: int): _on_smart_fill_mode_changed(smart_fill_mode_opt_btn.get_selected_id(), smart_fill_width_spin_box.value, smart_fill_direction_opt_btn.get_selected_id(), smart_fill_face_flip_check_box.button_pressed))
 
-
+	smart_fill_face_flip_check_box.pressed.connect(
+		func (): _on_smart_fill_mode_changed(smart_fill_mode_opt_btn.get_selected_id(), smart_fill_width_spin_box.value, smart_fill_direction_opt_btn.get_selected_id(), smart_fill_face_flip_check_box.button_pressed))
+	
 	
 
 func set_flipped(flipped: bool) -> void:
@@ -250,6 +253,8 @@ func sync_from_settings(tilemap_settings: TileMapLayerSettings) -> void:
 	smart_fill_mode_opt_btn.selected = tilemap_settings.smart_fill_mode
 	smart_fill_width_spin_box.value = tilemap_settings.smart_fill_width
 	smart_fill_direction_opt_btn.selected = tilemap_settings.smart_fill_quad_growth_dir
+	smart_fill_face_flip_check_box.button_pressed = tilemap_settings.smart_fill_flip_face
+
 
 	# Sync visibility from mode + smart select state
 	match tilemap_settings.main_app_mode:
@@ -411,5 +416,5 @@ func _on_sculpt_brush_size_changed(value: float) -> void:
 	# print("Sculp brush size changed: ", value)
 	sculp_brush_changed.emit(sculp_brush_dropdown.get_selected_id(), sculpt_brush_size_hslider.value)
 
-func _on_smart_fill_mode_changed(fill_mode: int, width: float, fill_direction: int) -> void:
-	smart_fill_changed.emit(fill_mode, width, fill_direction)
+func _on_smart_fill_mode_changed(fill_mode: int, width: float, fill_direction: int, flip_face: bool) -> void:
+	smart_fill_changed.emit(fill_mode, width, fill_direction, flip_face)
