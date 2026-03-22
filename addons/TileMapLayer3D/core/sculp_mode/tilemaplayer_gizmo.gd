@@ -223,10 +223,16 @@ func _draw_smart_fill_preview(gizmo_plugin: TileMapLayerGizmoPlugin) -> void:
 			var abs_h: float = absf(hdiff)
 			var ground_h: Vector3 = high_pt - surface_normal * abs_h
 
-			## Independent h/v step counts based on grid_size.
+			## Step counts using threshold logic (matches smart_fill_manager).
 			var ground_span: float = (ground_h - low_pt).length()
-			var h_steps: int = maxi(1, roundi(ground_span / gs))
-			var v_steps: int = maxi(1, roundi(abs_h / gs))
+			var h_dist: float = ground_span / gs
+			var v_dist: float = abs_h / gs
+			var h_ceil: int = ceili(h_dist)
+			var v_ceil: int = ceili(v_dist)
+			var h_steps: int = h_ceil if (h_dist >= 0.75 and h_dist / float(h_ceil) >= 0.75) else maxi(1, floori(h_dist))
+			var v_steps: int = v_ceil if (v_dist >= 0.75 and v_dist / float(v_ceil) >= 0.75) else maxi(1, floori(v_dist))
+			if h_steps == 0 or v_steps == 0:
+				continue
 			var h_sv: Vector3 = (ground_h - low_pt) / float(h_steps)
 			var v_step_size: float = abs_h / float(v_steps)
 			var v_sv: Vector3 = surface_normal * v_step_size

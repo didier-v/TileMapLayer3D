@@ -382,16 +382,9 @@ func get_fill_grid_positions(width: int = 1) -> Array[Vector3]:
 
 	print("[SmartFill] quad_fill_length=%.3f  fill_dist=%.2f" % [quad_fill_length, fill_dist])
 
-	if fill_dist < row_division_thres:
+	var row_count: int = _compute_step_count(fill_dist)
+	if row_count == 0:
 		return result
-
-	## Prefer more rows (ceil) when each cell stays ≥ threshold of grid_size.
-	var row_count_ceil: int = ceili(fill_dist)
-	var row_count: int
-	if fill_dist / float(row_count_ceil) >= row_division_thres:
-		row_count = row_count_ceil
-	else:
-		row_count = maxi(1, floori(fill_dist))
 
 	print("[SmartFill] row_count=%d  cell_size=%.2f" % [row_count, fill_dist / float(row_count)])
 
@@ -571,16 +564,9 @@ func _compute_side_fill_tiles(uv_rect: Rect2, is_flipped: bool,
 	var quad_fill_length: float = fill_edge.length()
 	var fill_dist: float = quad_fill_length / grid_size
 
-	if fill_dist < row_division_thres:
+	var row_count: int = _compute_step_count(fill_dist)
+	if row_count == 0:
 		return result
-
-	## Prefer more rows (ceil) when each cell stays ≥ threshold of grid_size.
-	var row_count_ceil: int = ceili(fill_dist)
-	var row_count: int
-	if fill_dist / float(row_count_ceil) >= row_division_thres:
-		row_count = row_count_ceil
-	else:
-		row_count = maxi(1, floori(fill_dist))
 
 	print("[SmartFill SIDES] fill_dist=%.2f  row_count=%d" % [fill_dist, row_count])
 
@@ -615,8 +601,12 @@ func _compute_side_fill_tiles(uv_rect: Rect2, is_flipped: bool,
 
 		## Compute step counts from physical dimensions, targeting grid_size-sized cells.
 		var ground_span: float = (ground_high - low_point).length()
-		var h_steps: int = maxi(1, roundi(ground_span / grid_size))
-		var v_steps: int = maxi(1, roundi(abs_height / grid_size))
+		var h_dist: float = ground_span / grid_size
+		var v_dist: float = abs_height / grid_size
+		var h_steps: int = _compute_step_count(h_dist)
+		var v_steps: int = _compute_step_count(v_dist)
+		if h_steps == 0 or v_steps == 0:
+			continue
 
 		var h_step_vec: Vector3 = (ground_high - low_point) / float(h_steps)
 		var v_step_size: float = abs_height / float(v_steps)
@@ -785,3 +775,15 @@ func _build_triangle_custom_transform(bl: Vector3, br: Vector3, tl: Vector3,
 	var basis_y: Vector3 = wall_normal.normalized()
 	var origin: Vector3 = bl + 0.5 * edge_x + 0.5 * edge_z
 	return Transform3D(Basis(basis_x, basis_y, basis_z), origin)
+
+
+## Computes step count using row_division_thres — shared by ramp fill and side fill.
+## Prefers more steps (ceili) when each cell stays >= threshold of grid_size.
+## Returns 0 if dist is below threshold (caller should skip).
+func _compute_step_count(dist: float) -> int:
+	if dist < row_division_thres:
+		return 0
+	var count_ceil: int = ceili(dist)
+	if dist / float(count_ceil) >= row_division_thres:
+		return count_ceil
+	return maxi(1, floori(dist))
