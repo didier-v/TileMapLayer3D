@@ -869,7 +869,8 @@ items_list = Dictionary[String, String]({
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_font_sizes/font_size = 10
-text = "Flip Face:"
+text = "Flip Ramp
+Face:"
 label_settings = SubResource("LabelSettings_2pos1")
 horizontal_alignment = 1
 
@@ -878,15 +879,16 @@ unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "Defines if the tiles show with faces flipped or not"
 
-[node name="SmartFillSidesLbl" type="Label" parent="SmartOperationtGroup/SmartFillGroup"]
+[node name="SmartFillSidesLbl" type="Label" parent="SmartOperationtGroup/SmartFillGroup" unique_id=905184440]
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_font_sizes/font_size = 10
-text = "Sides"
+text = "Fill
+Sides"
 label_settings = SubResource("LabelSettings_2pos1")
 horizontal_alignment = 1
 
-[node name="SmartFillRampSidesCheckBox" type="CheckBox" parent="SmartOperationtGroup/SmartFillGroup"]
+[node name="SmartFillRampSidesCheckBox" type="CheckBox" parent="SmartOperationtGroup/SmartFillGroup" unique_id=699979525]
 unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "Fill the sides of the ramp with a staircase of wall tiles"
