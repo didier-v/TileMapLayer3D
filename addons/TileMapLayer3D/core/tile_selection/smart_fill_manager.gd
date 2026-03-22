@@ -628,6 +628,11 @@ func _compute_side_fill_tiles(uv_rect: Rect2, is_flipped: bool,
 		## When det < 0, face winding flips → swap vertices to correct it.
 		var natural_face_dir: Vector3 = h_step_vec.cross(v_step_vec)
 		var reverse_winding: bool = natural_face_dir.dot(wall_normal) > 0.0
+		print("[SmartFill SIDES]   h_step_vec=%s  v_step_vec=%s  wall_normal=%s  reverse=%s" % [
+			str(snapped(h_step_vec, Vector3(0.01, 0.01, 0.01))),
+			str(snapped(v_step_vec, Vector3(0.01, 0.01, 0.01))),
+			str(snapped(wall_normal, Vector3(0.01, 0.01, 0.01))),
+			str(reverse_winding)])
 
 		## Build staircase with exact-diagonal triangles: for each column, place
 		## full square rows below the diagonal, then one triangle on the diagonal.
@@ -676,6 +681,10 @@ func _compute_side_fill_tiles(uv_rect: Rect2, is_flipped: bool,
 					"texture_repeat_mode": texture_repeat,
 					"custom_transform": sq_transform,
 				})
+				print("[SmartFill SIDES]     sq col=%d row=%d  ori=%d  winding=%s  edge_x=%s  edge_z=%s" % [
+					col, row, wall_ori, "REV" if reverse_winding else "NRM",
+					str(snapped(sq_br - sq_bl, Vector3(0.01, 0.01, 0.01))),
+					str(snapped(sq_tl - sq_bl, Vector3(0.01, 0.01, 0.01)))])
 
 			## Place FLAT_TRIANGULE filling from top of last square row to diagonal.
 			## Using row_top instead of diag_left closes gaps when h_steps != v_steps.
@@ -711,6 +720,10 @@ func _compute_side_fill_tiles(uv_rect: Rect2, is_flipped: bool,
 				"texture_repeat_mode": texture_repeat,
 				"custom_transform": tri_transform,
 			})
+			print("[SmartFill SIDES]     tri col=%d  ori=%d  winding=%s  edge_x=%s  edge_z=%s" % [
+				col, wall_ori, "REV" if reverse_winding else "NRM",
+				str(snapped(tri_br - tri_bl, Vector3(0.01, 0.01, 0.01))),
+				str(snapped(tri_tl - tri_bl, Vector3(0.01, 0.01, 0.01)))])
 
 			## When diag_left > row_top, the main triangle only covers the right half
 			## of the trapezoid below the diagonal. Add a second gap-filling triangle
@@ -746,6 +759,10 @@ func _compute_side_fill_tiles(uv_rect: Rect2, is_flipped: bool,
 					"texture_repeat_mode": texture_repeat,
 					"custom_transform": gap_transform,
 				})
+				print("[SmartFill SIDES]     gap col=%d  ori=%d  winding=%s  edge_x=%s  edge_z=%s" % [
+					col, wall_ori, "REV" if reverse_winding else "NRM",
+					str(snapped(gap_br - gap_bl, Vector3(0.01, 0.01, 0.01))),
+					str(snapped(gap_tl - gap_bl, Vector3(0.01, 0.01, 0.01)))])
 
 	print("[SmartFill SIDES] total side tiles=%d" % result.size())
 	return result
