@@ -221,6 +221,36 @@ extends Resource
 			sculpt_brush_size = value
 			emit_changed()
 
+@export var sculpt_draw_top: bool = true:
+	set(value):
+		if sculpt_draw_top != value:
+			sculpt_draw_top = value
+			emit_changed()
+
+@export var sculpt_draw_bottom: bool = false:
+	set(value):
+		if sculpt_draw_bottom != value:
+			sculpt_draw_bottom = value
+			emit_changed()
+
+@export var sculpt_flip_sides: bool = false:
+	set(value):
+		if sculpt_flip_sides != value:
+			sculpt_flip_sides = value
+			emit_changed()
+
+@export var sculpt_flip_top: bool = false:
+	set(value):
+		if sculpt_flip_top != value:
+			sculpt_flip_top = value
+			emit_changed()
+
+@export var sculpt_flip_bottom: bool = false:
+	set(value):
+		if sculpt_flip_bottom != value:
+			sculpt_flip_bottom = value
+			emit_changed()
+
 @export_group("Smart Operations")
 
 ## Main mode for Smart Operations (Enum defined in Global Constants)

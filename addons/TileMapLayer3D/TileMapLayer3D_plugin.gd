@@ -150,6 +150,7 @@ func _enter_tree() -> void:
 	editor_ui._context_toolbar.smart_operations_mode_changed.connect(_on_smart_operations_mode_changed)
 	editor_ui.smart_select_mode_changed.connect(_on_smart_select_mode_changed)
 	editor_ui._context_toolbar.sculp_brush_changed.connect(_on_sculp_mode_brush_changed)
+	editor_ui._context_toolbar.sculp_mode_options_changed.connect(_on_sculp_mode_options_changed)
 	editor_ui._context_toolbar.smart_fill_changed.connect(_on_smart_fill_changed)
 
 
@@ -1727,6 +1728,16 @@ func _on_sculp_mode_brush_changed(brush_type: GlobalConstants.SculptBrushType, b
 		current_tile_map3d.settings.sculpt_brush_size = brush_size
 		_sculpt_manager.rebuild_brush_shape_template()
 		print("Sculpt brush changed - Type: ", brush_type, " Size: ", brush_size)
+
+func _on_sculp_mode_options_changed(draw_top: bool, draw_bottom: bool, flip_sides: bool, flip_top: bool, flip_bottom: bool) -> void:
+	if current_tile_map3d:
+		current_tile_map3d.settings.sculpt_draw_top = draw_top
+		current_tile_map3d.settings.sculpt_draw_bottom = draw_bottom
+		current_tile_map3d.settings.sculpt_flip_top = flip_top
+		current_tile_map3d.settings.sculpt_flip_sides= flip_sides
+		current_tile_map3d.settings.sculpt_flip_bottom = flip_bottom
+		# current_tile_map3d.update_gizmos()
+
 
 func _on_smart_operations_mode_changed(mode: GlobalConstants.SmartOperationsMainMode) -> void:
 	if current_tile_map3d:

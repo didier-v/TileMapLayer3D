@@ -34,8 +34,10 @@ signal autotile_depth_changed(depth: float)
 ## Emitted when Sculpt Mode Brush changed (Size and Type)
 signal sculp_brush_changed(brush_type: GlobalConstants.SculptBrushType, brush_size: float)
 
-signal smart_operations_mode_changed(smart_mode: GlobalConstants.SmartOperationsMainMode)
+## Emitted when Any of the UI settings on Sculpt Mode changed 
+signal sculp_mode_options_changed(draw_top: bool, draw_bottom: bool, flip_sides: bool, flip_top: bool, flip_bottom: bool)
 
+signal smart_operations_mode_changed(smart_mode: GlobalConstants.SmartOperationsMainMode)
 
 signal smart_fill_changed(fill_mode: int, width: float, fill_direction: int, flip_face: bool)
 
@@ -95,6 +97,12 @@ signal smart_fill_changed(fill_mode: int, width: float, fill_direction: int, fli
 # @onready var sculp_mode_btn: Button = %SculpModeBtn
 @onready var sculp_brush_dropdown: OptionButton = %SculpBrushDropdown
 @onready var sculpt_brush_size_hslider: HSlider = %SculptBrushSizeHSlider
+
+@onready var sculp_draw_top_check_box: CheckBox = $SculpModeGroup/DrawTilesHBoxContainer/VBoxContainer/SculpDrawTopCheckBox
+@onready var sculp_draw_bottom_check_box: CheckBox = $SculpModeGroup/DrawTilesHBoxContainer/VBoxContainer2/SculpDrawBottomCheckBox
+@onready var sculp_flip_sides_check_box: CheckBox = $SculpModeGroup/FlipTilesHBoxContainer/VBoxContainer5/SculpFlipSidesCheckBox
+@onready var sculp_flip_top_check_box: CheckBox = $SculpModeGroup/FlipTilesHBoxContainer/VBoxContainer3/SculpFlipTopCheckBox
+@onready var sculp_flip_bottom_check_box: CheckBox = $SculpModeGroup/FlipTilesHBoxContainer/VBoxContainer4/SculpFlipBottomCheckBox
 
 
 ## UI Variables
@@ -194,7 +202,13 @@ func prepare_ui_components() -> void:
 	smart_fill_face_flip_check_box.pressed.connect(
 		func (): _on_smart_fill_mode_changed(smart_fill_mode_opt_btn.get_selected_id(), smart_fill_width_spin_box.value, smart_fill_direction_opt_btn.get_selected_id(), smart_fill_face_flip_check_box.button_pressed))
 	
-	
+	sculp_draw_top_check_box.pressed.connect(_on_sculpt_mode_ui_changed)
+	sculp_draw_bottom_check_box.pressed.connect(_on_sculpt_mode_ui_changed)
+	sculp_flip_sides_check_box.pressed.connect(_on_sculpt_mode_ui_changed)
+	sculp_flip_top_check_box.pressed.connect(_on_sculpt_mode_ui_changed)
+	sculp_flip_bottom_check_box.pressed.connect(_on_sculpt_mode_ui_changed)
+
+
 
 func set_flipped(flipped: bool) -> void:
 	_updating_ui = true
@@ -240,20 +254,26 @@ func sync_from_settings(tilemap_settings: TileMapLayerSettings) -> void:
 
 	# UI Items to sync:
 	smart_select_mode_option_btn.select(tilemap_settings.smart_select_mode)
-
-	mesh_mode_dropdown.selected = tilemap_settings.mesh_mode
-	mesh_mode_depth_spin_box.value = tilemap_settings.current_depth_scale
-	auto_tile_mode_dropdown.selected = tilemap_settings.autotile_mesh_mode
-	auto_tile_detph_spin_box.value = tilemap_settings.autotile_depth_scale
-	sculp_brush_dropdown.selected = tilemap_settings.sculpt_brush_type
-	sculpt_brush_size_hslider.value = tilemap_settings.sculpt_brush_size
-
 	smart_operation_opt_btn.selected = tilemap_settings.smart_operations_main_mode
 
 	smart_fill_mode_opt_btn.selected = tilemap_settings.smart_fill_mode
 	smart_fill_width_spin_box.value = tilemap_settings.smart_fill_width
 	smart_fill_direction_opt_btn.selected = tilemap_settings.smart_fill_quad_growth_dir
 	smart_fill_face_flip_check_box.button_pressed = tilemap_settings.smart_fill_flip_face
+
+	mesh_mode_dropdown.selected = tilemap_settings.mesh_mode
+	mesh_mode_depth_spin_box.value = tilemap_settings.current_depth_scale
+
+	auto_tile_mode_dropdown.selected = tilemap_settings.autotile_mesh_mode
+	auto_tile_detph_spin_box.value = tilemap_settings.autotile_depth_scale
+
+	sculp_brush_dropdown.selected = tilemap_settings.sculpt_brush_type
+	sculpt_brush_size_hslider.value = tilemap_settings.sculpt_brush_size
+	sculp_draw_bottom_check_box.button_pressed = tilemap_settings.sculpt_draw_bottom
+	sculp_draw_top_check_box.button_pressed = tilemap_settings.sculpt_draw_top
+	sculp_flip_sides_check_box.button_pressed = tilemap_settings.sculpt_flip_sides
+	sculp_flip_top_check_box.button_pressed = tilemap_settings.sculpt_flip_top
+	sculp_flip_bottom_check_box.button_pressed = tilemap_settings.sculpt_flip_bottom
 
 
 	# Sync visibility from mode + smart select state
@@ -415,6 +435,14 @@ func _on_sculp_brush_selected(index: int) -> void:
 func _on_sculpt_brush_size_changed(value: float) -> void:
 	# print("Sculp brush size changed: ", value)
 	sculp_brush_changed.emit(sculp_brush_dropdown.get_selected_id(), sculpt_brush_size_hslider.value)
+
+func _on_sculpt_mode_ui_changed(_arg = null):
+	sculp_mode_options_changed.emit(
+		sculp_draw_top_check_box.button_pressed,
+		sculp_draw_bottom_check_box.button_pressed,
+		sculp_flip_sides_check_box.button_pressed,
+		sculp_flip_top_check_box.button_pressed,
+		sculp_flip_bottom_check_box.button_pressed)
 
 func _on_smart_fill_mode_changed(fill_mode: int, width: float, fill_direction: int, flip_face: bool) -> void:
 	smart_fill_changed.emit(fill_mode, width, fill_direction, flip_face)

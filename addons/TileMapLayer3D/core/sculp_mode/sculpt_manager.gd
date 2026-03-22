@@ -24,10 +24,10 @@ signal sculpt_tiles_created(tile_list: Array[Dictionary])
 var state: SculptState = SculptState.IDLE
 
 ## When true, the bottom floor tiles are skipped 
-var no_base_floor: bool = true
+var draw_base_floor: bool = false
 
 ## When true, the top ceiling tiles are skipped
-var no_base_ceiling: bool = false
+var draw_base_ceiling: bool = true
 
 ## When true, floor tiles have their faces flipped
 var flip_floor_faces: bool = false
@@ -108,6 +108,15 @@ func set_active_node(tilemap_node: TileMapLayer3D, placement_mgr: TilePlacementM
 	_active_tilema3d_node = tilemap_node
 	placement_manager = placement_mgr
 	rebuild_brush_shape_template()
+	sync_from_settings()
+
+func sync_from_settings() -> void:
+	if _active_tilema3d_node:
+		draw_base_floor = _active_tilema3d_node.settings.sculpt_draw_bottom
+		draw_base_ceiling = _active_tilema3d_node.settings.sculpt_draw_top
+		flip_floor_faces = _active_tilema3d_node.settings.sculpt_flip_bottom
+		flip_ceiling_faces = _active_tilema3d_node.settings.sculpt_flip_top
+		flip_wall_faces = _active_tilema3d_node.settings.sculpt_flip_sides
 
 
 ## Called every mouse move to update the brush world position.
@@ -180,7 +189,7 @@ func on_mouse_release() -> void:
 			var raise: float = get_raise_amount()
 			# if abs(raise) >= 0.000:
 			
-			_build_tile_list(drag_pattern.duplicate(), drag_anchor_world_pos.y, raise, grid_size, no_base_floor, no_base_ceiling)
+			_build_tile_list(drag_pattern.duplicate(), drag_anchor_world_pos.y, raise, grid_size)
 
 			state = SculptState.IDLE
 			drag_pattern.clear()
@@ -189,9 +198,12 @@ func on_mouse_release() -> void:
 
 
 ## Build the tile list based on Brush drag_pattern 3D volume
-func _build_tile_list(cells: Dictionary, base_y: float, raise_amount: float, gs: float, no_base_floor: bool = false, no_base_ceiling: bool = false) -> void:
+func _build_tile_list(cells: Dictionary, base_y: float, raise_amount: float, gs: float) -> void:
 	if not _active_tilema3d_node or not placement_manager:
 		return
+
+	# Get latest configruation settgings and update local vaariables first.
+	sync_from_settings()
 
 	var uv_rect: Rect2 = placement_manager.current_tile_uv
 	var height_in_grid: float = raise_amount / gs
@@ -207,8 +219,8 @@ func _build_tile_list(cells: Dictionary, base_y: float, raise_amount: float, gs:
 	var tile_list: Array[Dictionary] = []
 	var depth: float = _active_tilema3d_node.settings.current_depth_scale if _active_tilema3d_node.settings else 0.1
 
-	# 1. Handle TOP FLOOR 
-	if not no_base_ceiling:
+	# 1. Handle TOP BASE CEILING 
+	if draw_base_ceiling:
 		for cell: Vector2i in cells:
 			var cell_type: int = cells[cell]
 			var mapping: Vector2i = GlobalConstants.SCULPT_CELL_TO_TILE[cell_type]
@@ -216,7 +228,7 @@ func _build_tile_list(cells: Dictionary, base_y: float, raise_amount: float, gs:
 				0, mapping.x, mapping.y, uv_rect, depth, flip_ceiling_faces)
 
 	# 2. Handle BOTTOM FLOOR
-	if not no_base_floor:
+	if draw_base_floor:
 		for cell: Vector2i in cells:
 			var cell_type: int = cells[cell]
 			var mapping: Vector2i = GlobalConstants.SCULPT_CELL_TO_TILE[cell_type]
@@ -296,6 +308,12 @@ func _build_tile_list(cells: Dictionary, base_y: float, raise_amount: float, gs:
 
 ## Helper: creates a tile dictionary and appends it to tile_list.
 func _sculpt_add_tile(tile_list: Array[Dictionary], grid_pos: Vector3, orientation: int, mesh_mode: int, mesh_rotation: int, uv_rect: Rect2, depth_scale: float, p_flip: bool = false) -> void:
+	# Compensate triangle rotation when flipping. The Z-flip in
+	# build_tile_transform shifts the triangle one quadrant (CW).
+	# Adding 3 steps (= one step CCW) cancels the shift.
+	var actual_rotation: int = mesh_rotation
+	if p_flip and mesh_mode == GlobalConstants.MeshMode.FLAT_TRIANGULE:
+		actual_rotation = (mesh_rotation + 3) % 4
 	var tile_key: int = GlobalUtil.make_tile_key(grid_pos, orientation)
 	if non_destructive and _active_tilema3d_node and _active_tilema3d_node.has_tile(tile_key):
 		if not replace_boundary_triangles:
@@ -314,12 +332,12 @@ func _sculpt_add_tile(tile_list: Array[Dictionary], grid_pos: Vector3, orientati
 		if existing_mode != GlobalConstants.MeshMode.FLAT_TRIANGULE:
 			return
 		# Only replace if the new tile is actually different
-		if mesh_mode == existing_mode and mesh_rotation == existing_rotation:
+		if mesh_mode == existing_mode and actual_rotation == existing_rotation:
 			return
 		# Allow replacement — fall through to append
 	tile_list.append({
 		"tile_key": tile_key, "grid_pos": grid_pos, "uv_rect": uv_rect,
-		"orientation": orientation, "rotation": mesh_rotation,
+		"orientation": orientation, "rotation": actual_rotation,
 		"flip": p_flip, "mode": mesh_mode,
 		"terrain_id": GlobalConstants.AUTOTILE_NO_TERRAIN,
 		"depth_scale": depth_scale, "texture_repeat_mode": 0
