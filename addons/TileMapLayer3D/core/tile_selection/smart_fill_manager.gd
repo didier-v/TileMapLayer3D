@@ -31,11 +31,11 @@ var preview_active: bool = false  ## True only when mouse is over a real tile
 var grid_size: float = 1.0
 
 ## ## Threshold for subdividing ramp sides (0.0 to 1.0).
-## If a cell's length is >= this fraction of grid_size, it is kept.
-var row_division_sides_thres: float = 0.70
+## Lower equals more rows per column.
+var row_division_sides_thres: float = 1.00
 
 ## Threshold for subdividing ramp faces (main ramp) (0.0 to 1.0).
-var row_division_face_thres: float = 0.95
+var row_division_face_thres: float = 1.00
 
 
 
@@ -606,28 +606,23 @@ func _compute_side_fill_tiles(uv_rect: Rect2, is_flipped: bool,
 		## Ground projection of the high point (at low point's height level).
 		var ground_high: Vector3 = high_point - surface_normal * abs_height
 
-		## Side staircase uses row_count (from the face) as its step count.
-		## This keeps side subdivision aligned with the ramp face tiles.
-		## row_division_sides_thres can reduce it further if cells are too small.
+		## Side step count from the arithmetic mean of both dimensions.
+		## Minimizes max deviation of h_step and v_step from grid_size.
 		var ground_span: float = (ground_high - low_point).length()
-		var side_steps: int = row_count
-		## Optionally reduce if side cells would be smaller than threshold.
-		var side_cell_dist: float = minf(ground_span, abs_height) / (grid_size * float(side_steps))
-		while side_steps > 1 and side_cell_dist < row_division_sides_thres:
-			side_steps -= 1
-			side_cell_dist = minf(ground_span, abs_height) / (grid_size * float(side_steps))
+		var h_dist: float = ground_span / grid_size
+		var v_dist: float = abs_height / grid_size
+		var mean_dist: float = (h_dist + v_dist) / 2.0
+		var side_steps: int = _compute_step_count(mean_dist, row_division_sides_thres)
 		if side_steps == 0:
 			continue
 
 		var h_step_vec: Vector3 = (ground_high - low_point) / float(side_steps)
 		var v_step_vec: Vector3 = surface_normal * (abs_height / float(side_steps))
 
-		print("[SmartFill SIDES]   side: ground=%.2f  height=%.2f  side_steps=%d" % [
-			ground_span, abs_height, side_steps])
+		print("[SmartFill SIDES]   side: ground=%.2f  height=%.2f  mean=%.2f  side_steps=%d" % [
+			ground_span, abs_height, mean_dist * grid_size, side_steps])
 
 		## Check if the basis determinant is negative (face renders inward).
-		## det ∝ edge_x · (wall_normal × edge_z) = -edge_x.cross(edge_z) · wall_normal
-		## When det < 0, face winding flips → swap vertices to correct it.
 		var natural_face_dir: Vector3 = h_step_vec.cross(v_step_vec)
 		var reverse_winding: bool = natural_face_dir.dot(wall_normal) > 0.0
 		print("[SmartFill SIDES]   h_step_vec=%s  v_step_vec=%s  wall_normal=%s  reverse=%s" % [
@@ -646,7 +641,6 @@ func _compute_side_fill_tiles(uv_rect: Rect2, is_flipped: bool,
 				var sq_p1: Vector3 = col_origin + h_step_vec + v_step_vec * float(row)
 				var sq_p2: Vector3 = col_origin + h_step_vec + v_step_vec * float(row + 1)
 				var sq_p3: Vector3 = col_origin + v_step_vec * float(row + 1)
-				## Swap BL↔BR and TL↔TR to reverse face direction when needed.
 				var sq_bl: Vector3 = sq_p1 if reverse_winding else sq_p0
 				var sq_br: Vector3 = sq_p0 if reverse_winding else sq_p1
 				var sq_tr: Vector3 = sq_p3 if reverse_winding else sq_p2
@@ -684,7 +678,6 @@ func _compute_side_fill_tiles(uv_rect: Rect2, is_flipped: bool,
 			var tri_p0: Vector3 = col_origin + v_step_vec * float(col)
 			var tri_p1: Vector3 = col_origin + h_step_vec + v_step_vec * float(col)
 			var tri_p2: Vector3 = col_origin + h_step_vec + v_step_vec * float(col + 1)
-			## Swap BL↔BR to reverse face direction when needed.
 			var tri_bl: Vector3 = tri_p1 if reverse_winding else tri_p0
 			var tri_br: Vector3 = tri_p0 if reverse_winding else tri_p1
 			var tri_tl: Vector3 = tri_p2
