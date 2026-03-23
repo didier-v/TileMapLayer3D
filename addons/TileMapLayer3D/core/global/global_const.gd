@@ -435,7 +435,7 @@ const TILESET_ZOOM_STEP: float = 1.1
 ## Minimum zoom level (percentage of original texture size)
 ## Prevents zooming out too far and losing detail
 ## Default: 0.25 (25% = 4x zoom out)
-const TILESET_MIN_ZOOM: float = 0.25
+const TILESET_MIN_ZOOM: float = 0.1
 
 ## Maximum zoom level (percentage of original texture size)
 ## Prevents zooming in too far (pixelation limit)
