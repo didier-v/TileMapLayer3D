@@ -109,22 +109,27 @@ static func merge_tiles_to_array_mesh(tile_map_layer: TileMapLayer3D) -> Diction
 		if tile_data.is_empty():
 			continue
 
-		# Build transform for this tile using GlobalUtil (single source of truth)
-		# Uses saved transform params for data persistency
-		# Passes mesh_mode and depth_scale for proper BOX/PRISM scaling
-		var transform: Transform3D = GlobalUtil.build_tile_transform(
-			tile_data["grid_position"],
-			tile_data["orientation"],
-			tile_data["mesh_rotation"],
-			grid_size,
-			tile_data["is_face_flipped"],
-			tile_data["spin_angle_rad"],
-			tile_data["tilt_angle_rad"],
-			tile_data["diagonal_scale"],
-			tile_data["tilt_offset_factor"],
-			tile_data["mesh_mode"],
-			tile_data["depth_scale"]
-		)
+		# Check for custom transform (ramp/smart fill tiles bypass standard orientation)
+		var transform: Transform3D
+		if tile_data.has("custom_transform"):
+			transform = tile_data["custom_transform"]
+		else:
+			# Build transform for this tile using GlobalUtil (single source of truth)
+			# Uses saved transform params for data persistency
+			# Passes mesh_mode and depth_scale for proper BOX/PRISM scaling
+			transform = GlobalUtil.build_tile_transform(
+				tile_data["grid_position"],
+				tile_data["orientation"],
+				tile_data["mesh_rotation"],
+				grid_size,
+				tile_data["is_face_flipped"],
+				tile_data["spin_angle_rad"],
+				tile_data["tilt_angle_rad"],
+				tile_data["diagonal_scale"],
+				tile_data["tilt_offset_factor"],
+				tile_data["mesh_mode"],
+				tile_data["depth_scale"]
+			)
 
 		#   Calculate exact UV coordinates from tile rect
 		# Normalize pixel coordinates to [0,1] range for texture sampling
@@ -411,21 +416,26 @@ static func _merge_alpha_aware(tile_map_layer: TileMapLayer3D) -> Dictionary:
 		if tile_data.is_empty():
 			continue
 
-		# Build transform using saved transform params for data persistency
-		# Passes mesh_mode and depth_scale for proper BOX/PRISM scaling
-		var transform: Transform3D = GlobalUtil.build_tile_transform(
-			tile_data["grid_position"],
-			tile_data["orientation"],
-			tile_data["mesh_rotation"],
-			grid_size,
-			tile_data["is_face_flipped"],
-			tile_data["spin_angle_rad"],
-			tile_data["tilt_angle_rad"],
-			tile_data["diagonal_scale"],
-			tile_data["tilt_offset_factor"],
-			tile_data["mesh_mode"],
-			tile_data["depth_scale"]
-		)
+		# Check for custom transform (ramp/smart fill tiles bypass standard orientation)
+		var transform: Transform3D
+		if tile_data.has("custom_transform"):
+			transform = tile_data["custom_transform"]
+		else:
+			# Build transform using saved transform params for data persistency
+			# Passes mesh_mode and depth_scale for proper BOX/PRISM scaling
+			transform = GlobalUtil.build_tile_transform(
+				tile_data["grid_position"],
+				tile_data["orientation"],
+				tile_data["mesh_rotation"],
+				grid_size,
+				tile_data["is_face_flipped"],
+				tile_data["spin_angle_rad"],
+				tile_data["tilt_angle_rad"],
+				tile_data["diagonal_scale"],
+				tile_data["tilt_offset_factor"],
+				tile_data["mesh_mode"],
+				tile_data["depth_scale"]
+			)
 
 		# Normalize UV rect using GlobalUtil (single source of truth)
 		var uv_data: Dictionary = GlobalUtil.calculate_normalized_uv(tile_data["uv_rect"], atlas_size)
