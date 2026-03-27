@@ -25,6 +25,8 @@ signal smart_select_operation_btn_pressed(smart_mode_operation: GlobalConstants.
 signal mesh_mode_selection_changed(mesh_mode: GlobalConstants.MeshMode)
 ## Emitted when mesh mode depth spinbox value changes (for BOX/PRISM depth scaling)
 signal mesh_mode_depth_changed(depth: float)
+## Emitted when arch radius ratio spinbox value changes (for FLAT_ARCH mode)
+signal arch_radius_ratio_changed(ratio: float)
 
 # Emitted when autotile mesh mode changes (FLAT_SQUARE or BOX_MESH only)
 signal autotile_mesh_mode_changed(mesh_mode: int)
@@ -94,6 +96,8 @@ signal vertex_delete_pressed()
 
 @onready var mesh_mode_dropdown: OptionButton = %MeshModeDropdown
 @onready var mesh_mode_depth_spin_box: SpinBox = %MeshModeDepthSpinBox
+@onready var arch_radius_lbl: Label = %ArchRadiusLbl
+@onready var arch_radius_spin_box: SpinBox = %ArchRadiusSpinBox
 @onready var auto_tile_mode_dropdown: OptionButton = %AutoTileModeDropdown
 @onready var auto_tile_detph_spin_box: SpinBox = %AutoTileDetphSpinBox
 
@@ -189,9 +193,11 @@ func prepare_ui_components() -> void:
 	# tile_size_x.get_line_edit().add_theme_font_size_override("font_size", int(10 * ui_scale))
 	# tile_size_y.get_line_edit().add_theme_font_size_override("font_size", int(10 * ui_scale))
 	mesh_mode_depth_spin_box.get_line_edit().add_theme_font_size_override("font_size", int(10 * ui_scale))
+	arch_radius_spin_box.get_line_edit().add_theme_font_size_override("font_size", int(10 * ui_scale))
 
 	mesh_mode_dropdown.item_selected.connect(_on_mesh_mode_selected)
 	mesh_mode_depth_spin_box.value_changed.connect(_on_mesh_mode_depth_changed)
+	arch_radius_spin_box.value_changed.connect(_on_arch_radius_ratio_changed)
 
 	#Sculp Mode controls
 	sculp_brush_dropdown.item_selected.connect(_on_sculp_brush_selected)
@@ -285,6 +291,8 @@ func sync_from_settings(tilemap_settings: TileMapLayerSettings) -> void:
 
 	mesh_mode_dropdown.selected = tilemap_settings.mesh_mode
 	mesh_mode_depth_spin_box.value = tilemap_settings.current_depth_scale
+	arch_radius_spin_box.value = tilemap_settings.arch_radius_ratio
+	_update_mesh_mode_controls_visibility(tilemap_settings.mesh_mode)
 
 	auto_tile_mode_dropdown.selected = tilemap_settings.autotile_mesh_mode
 	auto_tile_detph_spin_box.value = tilemap_settings.autotile_depth_scale
@@ -404,12 +412,24 @@ func _on_flip_toggled(pressed: bool) -> void:
 func _on_mesh_mode_selected(index: int) -> void:
 	if _updating_ui:
 		return
-	mesh_mode_selection_changed.emit(mesh_mode_dropdown.get_selected_id())
+	var selected_mode: int = mesh_mode_dropdown.get_selected_id()
+	_update_mesh_mode_controls_visibility(selected_mode)
+	mesh_mode_selection_changed.emit(selected_mode)
 
 func _on_mesh_mode_depth_changed(value: float) -> void:
 	if _updating_ui:
 		return
 	mesh_mode_depth_changed.emit(value)
+
+func _on_arch_radius_ratio_changed(value: float) -> void:
+	if _updating_ui:
+		return
+	arch_radius_ratio_changed.emit(value)
+
+func _update_mesh_mode_controls_visibility(mesh_mode: int) -> void:
+	var is_arch: bool = mesh_mode == GlobalConstants.MeshMode.FLAT_ARCH
+	arch_radius_lbl.visible = is_arch
+	arch_radius_spin_box.visible = is_arch
 
 func _on_auto_tile_mode_selected(index: int) -> void:
 	if _updating_ui:

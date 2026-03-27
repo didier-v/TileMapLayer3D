@@ -376,7 +376,8 @@ enum MeshMode {
 	FLAT_SQUARE = 0,
 	FLAT_TRIANGULE = 1,
 	BOX_MESH = 2,
-	PRISM_MESH = 3
+	PRISM_MESH = 3,
+	FLAT_ARCH = 4
 }
 
 const DEFAULT_MESH_MODE: int = 0  # Start with square mode
@@ -397,6 +398,18 @@ enum TextureRepeatMode {
 	DEFAULT = 0,  # Side faces sample edge stripes from texture
 	REPEAT = 1    # All faces use full tile texture (uniform)
 }
+
+## FLAT_ARCH mesh: number of arc subdivision segments (fixed)
+const ARCH_ARC_SEGMENTS: int = 8
+
+## FLAT_ARCH mesh: default arc radius as fraction of grid_size
+const ARCH_DEFAULT_RADIUS_RATIO: float = 0.2
+
+## FLAT_ARCH mesh: minimum arc radius ratio (nearly flat)
+const ARCH_MIN_RADIUS_RATIO: float = 0.1
+
+## FLAT_ARCH mesh: maximum arc radius ratio (half the cell)
+const ARCH_MAX_RADIUS_RATIO: float = 0.5
 
 #endregion
 #region Bake Mode System
