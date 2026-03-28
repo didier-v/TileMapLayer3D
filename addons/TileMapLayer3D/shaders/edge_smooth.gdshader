@@ -1,101 +1,179 @@
 shader_type spatial;
- render_mode blend_add, depth_draw_opaque, cull_disabled, unshaded;
-//render_mode blend_add, depth_draw_opaque, cull_disabled, diffuse_toon, specular_toon;
+render_mode blend_mix, depth_draw_opaque, cull_disabled, unshaded;
 
+// ============================================================
+// EDGE BEVEL SHADER v7 — BALANCED HIGHLIGHT/SHADOW
+// ============================================================
+//
+// Detects edges via normal/depth discontinuities, computes edge
+// direction, applies balanced fake lighting (equal highlight and
+// shadow) using the pixel's own color. No white, no foreign tint.
+//
+// ============================================================
 
-// Edge Smooth Shader v3 — Screen-Space Bevel
-// Detects normal/depth edges and applies a subtle light gradient to simulate
-// smooth beveled edges. Uses additive blending so it only ADDS light where
-// the bevel would catch it — never darkens. Fully unshaded (no double-lighting).
-
+// --- Buffers ---
 uniform sampler2D DEPTH_TEXTURE : hint_depth_texture, filter_linear_mipmap;
 uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;
 uniform sampler2D NORMAL_TEXTURE : hint_normal_roughness_texture, filter_nearest;
 
-// --- Tunable parameters ---
+// --- Master ---
 uniform bool active = true;
-// How wide the bevel band is (in pixels)
-uniform float bevel_radius : hint_range(0.5, 12.0, 0.5) = 7.5;
-// Intensity of the bevel highlight (fraction of own color added back)
-uniform float bevel_intensity : hint_range(0.0, 1.0, 0.01) = 0.75;
-// Sensitivity for detecting normal changes (lower = more edges)
+
+// --- Bevel ---
+uniform float bevel_radius : hint_range(0.5, 20.0, 0.5) = 10.0;
+uniform float bevel_intensity : hint_range(0.0, 4.0, 0.01) = 0.8;
+// How much shadow/darkness suppresses the bevel (0 = no suppression, 1 = full)
+uniform float shadow_sensitivity : hint_range(0.0, 1.0, 0.01) = 0.85;
+
+// --- Curvature shaping ---
+// 0.5 = wide, soft, round falloff. 3.0 = tight, sharp, concentrated line.
+uniform float curvature_power : hint_range(0.10, 3.0, 0.01) = 0.20;
+
+// --- Edge detection ---
 uniform float normal_threshold : hint_range(0.0, 1.0, 0.01) = 0.1;
-// Sensitivity for detecting depth steps (wall-wall corners)
-uniform float depth_threshold : hint_range(0.0, 1.0, 0.01) = 0.95;
-// Skip edges with depth gap larger than this (open-air silhouettes)
+uniform float depth_threshold : hint_range(0.0, 1.0, 0.01) = 0.9;
 uniform float silhouette_cutoff : hint_range(0.1, 5.0, 0.1) = 0.5;
-// Debug: visualize detected edges
+
+
+
+// --- Distance fade ---
+uniform float fade_start = 10.0;
+uniform float fade_end = 30.0;
+
+// --- Debug ---
 uniform bool debug_show_edges = false;
 
-float getDepth(vec2 screen_uv, mat4 inv_proj) {
-	float raw_depth = texture(DEPTH_TEXTURE, screen_uv).r;
-	vec3 ndc = vec3(screen_uv * 2.0 - 1.0, raw_depth);
-	vec4 view_space = inv_proj * vec4(ndc, 1.0);
-	view_space.xyz /= view_space.w;
-	return -view_space.z;
+
+// ============================================================
+// DEPTH
+// ============================================================
+
+float getDepth(vec2 uv, mat4 inv_proj) {
+    float raw = texture(DEPTH_TEXTURE, uv).r;
+    vec3 ndc = vec3(uv * 2.0 - 1.0, raw);
+    vec4 view = inv_proj * vec4(ndc, 1.0);
+    view.xyz /= view.w;
+    return -view.z;
 }
 
+
+// ============================================================
+// MAIN
+// ============================================================
+
 void fragment() {
-	if (active)
-	{
-		vec2 pixel_size = bevel_radius / VIEWPORT_SIZE;
 
-		float center_depth = getDepth(SCREEN_UV, INV_PROJECTION_MATRIX);
-		vec3 center_normal = texture(NORMAL_TEXTURE, SCREEN_UV).rgb * 2.0 - 1.0;
+    // --------------------------------------------------------
+    // Base values
+    // --------------------------------------------------------
+    float center_depth = getDepth(SCREEN_UV, INV_PROJECTION_MATRIX);
+    vec3 center_normal = texture(NORMAL_TEXTURE, SCREEN_UV).rgb * 2.0 - 1.0;
 
-		// 8-direction sampling
-		vec2 offsets[8] = {
-			vec2( 0.0, -1.0) * pixel_size,
-			vec2( 0.0,  1.0) * pixel_size,
-			vec2(-1.0,  0.0) * pixel_size,
-			vec2( 1.0,  0.0) * pixel_size,
-			vec2(-1.0, -1.0) * pixel_size,
-			vec2( 1.0, -1.0) * pixel_size,
-			vec2(-1.0,  1.0) * pixel_size,
-			vec2( 1.0,  1.0) * pixel_size
-		};
+    // --------------------------------------------------------
+    // Distance fade
+    // --------------------------------------------------------
+    float distance_fade = 1.0 - smoothstep(fade_start, fade_end, center_depth);
 
-		float normal_edge_sum = 0.0;
-		float depth_edge_sum = 0.0;
+    // --------------------------------------------------------
+    // Radius scaling (tied to distance)
+    // --------------------------------------------------------
+    float depth_scale = clamp(1.0 / center_depth, 0.3, 2.0);
+    vec2 pixel_size = bevel_radius * depth_scale * distance_fade / VIEWPORT_SIZE;
 
-		for (int i = 0; i < 8; i++) {
-			vec2 sample_uv = SCREEN_UV + offsets[i];
-			vec3 neighbor_normal = texture(NORMAL_TEXTURE, sample_uv).rgb * 2.0 - 1.0;
-			float neighbor_depth = getDepth(sample_uv, INV_PROJECTION_MATRIX);
+    // --------------------------------------------------------
+    // Directions
+    // --------------------------------------------------------
+    vec2 offsets[8] = {
+        vec2( 0.0, -1.0),
+        vec2( 0.0,  1.0),
+        vec2(-1.0,  0.0),
+        vec2( 1.0,  0.0),
+        vec2(-1.0, -1.0),
+        vec2( 1.0, -1.0),
+        vec2(-1.0,  1.0),
+        vec2( 1.0,  1.0)
+    };
 
-			float normal_diff = 1.0 - dot(center_normal, neighbor_normal);
-			float is_normal_edge = smoothstep(normal_threshold, normal_threshold + 0.2, normal_diff);
+    // --------------------------------------------------------
+    // Accumulators
+    // --------------------------------------------------------
+    float edge_weight = 0.0;
+    vec2 edge_dir = vec2(0.0);
 
-			float depth_diff = abs(center_depth - neighbor_depth);
-			float is_depth_edge = smoothstep(depth_threshold, depth_threshold + 0.1, depth_diff);
+    // ========================================================
+    // MULTI-RADIUS SAMPLING
+    // ========================================================
+    for (int r = 1; r <= 2; r++) {
 
-			float is_not_silhouette = 1.0 - smoothstep(silhouette_cutoff, silhouette_cutoff + 0.5, depth_diff);
+        vec2 scaled = pixel_size * float(r);
 
-			normal_edge_sum += is_normal_edge * is_not_silhouette;
-			depth_edge_sum += is_depth_edge * is_not_silhouette;
-		}
+        for (int i = 0; i < 8; i++) {
 
-		float edge_amount = clamp(max(normal_edge_sum, depth_edge_sum) / 8.0, 0.0, 1.0);
+            vec2 dir = offsets[i];
+            vec2 uv = SCREEN_UV + dir * scaled;
 
-		if (debug_show_edges) {
-			float n = clamp(normal_edge_sum / 8.0, 0.0, 1.0);
-			float d = clamp(depth_edge_sum / 8.0, 0.0, 1.0);
-			// Additive debug: bright red/green overlay
-			ALBEDO = vec3(n, d, 0.0) * 0.7;
-			ALPHA = max(n, d) * 0.8;
-		} else {
-			// Use the pixel's OWN color as the highlight source.
-			// Additive blend adds a fraction of the mesh color back — edges get
-			// subtly brighter with their own color, no foreign tint.
-			vec3 pixel_color = texture(SCREEN_TEXTURE, SCREEN_UV).rgb;
-			ALBEDO = pixel_color * bevel_intensity * edge_amount;
-			ALPHA = edge_amount;
-		}
-	}
-	else
-	{
-		// Inactive: fully transparent, adds nothing
-		ALBEDO = vec3(0.0);
-		ALPHA = 0.0;
-	}
+            vec3 n = texture(NORMAL_TEXTURE, uv).rgb * 2.0 - 1.0;
+            float d = getDepth(uv, INV_PROJECTION_MATRIX);
+
+            float normal_diff = 1.0 - dot(center_normal, n);
+            float depth_diff = abs(center_depth - d);
+
+            float n_edge = smoothstep(normal_threshold, normal_threshold + 0.2, normal_diff);
+            float d_edge = smoothstep(depth_threshold, depth_threshold + 0.1, depth_diff);
+
+            float not_silhouette = 1.0 - smoothstep(silhouette_cutoff, silhouette_cutoff + 0.5, depth_diff);
+
+            float edge = max(n_edge, d_edge) * not_silhouette;
+
+            // Outer radius weighs less (soft falloff)
+            edge *= (r == 1) ? 1.0 : 0.5;
+
+            edge_weight += edge;
+            edge_dir += dir * edge;
+        }
+    }
+
+    // --------------------------------------------------------
+    // Edge amount + shaping
+    // --------------------------------------------------------
+    float edge_amount = clamp(edge_weight / 12.0, 0.0, 1.0);
+    vec2 final_dir = normalize(edge_dir + 0.0001);
+
+    edge_amount = pow(edge_amount, curvature_power);
+    edge_amount = smoothstep(0.1, 1.0, edge_amount);
+    edge_amount *= distance_fade;
+
+    // --------------------------------------------------------
+    // Output
+    // --------------------------------------------------------
+    if (debug_show_edges) {
+        ALBEDO = vec3(edge_amount, 0.0, 0.0);
+        ALPHA = edge_amount;
+    } else {
+        // ----------------------------------------------------
+        // Fake bevel lighting from edge direction
+        // ----------------------------------------------------
+        vec3 bevel_normal = normalize(vec3(-final_dir.x, 0.8, -final_dir.y));
+        vec3 light_dir = normalize(vec3(0.4, 0.7, 0.5));
+
+        float lighting = dot(bevel_normal, light_dir);
+        lighting = smoothstep(-0.2, 0.8, lighting);
+
+        // ----------------------------------------------------
+        // Luminance-gated highlight bevel
+        // Scales bevel by how bright the pixel already is.
+        // In shadow = dark pixel = tiny/no highlight.
+        // In light = bright pixel = visible bevel.
+        // ----------------------------------------------------
+        vec3 pixel_color = texture(SCREEN_TEXTURE, SCREEN_UV).rgb;
+        float luminance = dot(pixel_color, vec3(0.299, 0.587, 0.114));
+        // Mix between full effect (1.0) and luminance-gated based on sensitivity
+        float shadow_gate = mix(1.0, luminance, shadow_sensitivity);
+
+        float highlight = max(lighting * 2.0 - 1.0, 0.0) * bevel_intensity * edge_amount * shadow_gate;
+        vec3 final_color = pixel_color + pixel_color * highlight;
+
+        ALBEDO = final_color * float(active);
+        ALPHA = edge_amount * float(active);
+    }
 }

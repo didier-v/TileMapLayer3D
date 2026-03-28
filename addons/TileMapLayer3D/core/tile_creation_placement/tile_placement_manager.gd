@@ -1131,33 +1131,33 @@ func _do_place_tile(tile_key: int, grid_pos: Vector3, uv_rect: Rect2, orientatio
 	# - Diagonal scale override
 	# - Scale anchor to push growth to one side
 	# - Tilt offset multiplier
-	#var mesh_mode: int = tile_info.get("mode", 0)
-	#var is_arch_tile: bool = (
-	#	mesh_mode == GlobalConstants.MeshMode.FLAT_ARCH or
-	#	mesh_mode == GlobalConstants.MeshMode.FLAT_ARCH_TWO
-	#)
-	#if is_arch_tile and orientation >= 6:
-	#	var arch_pivot_angle: float = -0.085  # rotation around local Z (width axis)
-	#	var arch_diag_scale: float = 2.0      # diagonal scale override
-	#	var arch_offset_mult: float = 0.85    # tilt offset multiplier
-	#	var arch_scale_anchor: float = 0.25   # 0=center, 0.5=flat edge, -0.5=arch edge
-	#
-	#	diagonal_scale = arch_diag_scale
-	#	tilt_offset = tilt_offset * arch_offset_mult
-	#
-	#	var temp_transform: Transform3D = GlobalUtil.build_tile_transform(
-	#		grid_pos, orientation, mesh_rotation, grid_size, preserved_flip,
-	#		spin_angle, tilt_angle, diagonal_scale, tilt_offset,
-	#		mesh_mode, depth_scale
-	#	)
-	#	var local_z: Vector3 = temp_transform.basis.z.normalized()
-	#	var pivot_basis: Basis = Basis(local_z, arch_pivot_angle)
-	#	temp_transform.basis = pivot_basis * temp_transform.basis
-	#	if arch_scale_anchor != 0.0:
-	#		var local_x: Vector3 = temp_transform.basis.x.normalized()
-	#		var growth: float = (arch_diag_scale - 1.0) * grid_size * arch_scale_anchor
-	#		temp_transform.origin += local_x * growth
-	#	tile_info["custom_transform"] = temp_transform
+	var mesh_mode: int = tile_info.get("mode", 0)
+	var is_arch_tile: bool = (
+		mesh_mode == GlobalConstants.MeshMode.FLAT_ARCH or
+		mesh_mode == GlobalConstants.MeshMode.FLAT_ARCH_TWO
+	)
+	if is_arch_tile and orientation >= 6:
+		var arch_pivot_angle: float = 0.04  # rotation around local Z (width axis)
+		var arch_diag_scale: float = 1.565      # diagonal scale override
+		var arch_offset_mult: float = 1.12    # tilt offset multiplier
+		var arch_scale_anchor: float = 0.05   # 0=center, 0.5=flat edge, -0.5=arch edge
+	
+		diagonal_scale = arch_diag_scale
+		tilt_offset = tilt_offset * arch_offset_mult
+	
+		var temp_transform: Transform3D = GlobalUtil.build_tile_transform(
+			grid_pos, orientation, mesh_rotation, grid_size, preserved_flip,
+			spin_angle, tilt_angle, diagonal_scale, tilt_offset,
+			mesh_mode, depth_scale
+		)
+		var local_z: Vector3 = temp_transform.basis.z.normalized()
+		var pivot_basis: Basis = Basis(local_z, arch_pivot_angle)
+		temp_transform.basis = pivot_basis * temp_transform.basis
+		if arch_scale_anchor != 0.0:
+			var local_x: Vector3 = temp_transform.basis.x.normalized()
+			var growth: float = (arch_diag_scale - 1.0) * grid_size * arch_scale_anchor
+			temp_transform.origin += local_x * growth
+		tile_info["custom_transform"] = temp_transform
 
 
 	# Extract animation params from tile_info
