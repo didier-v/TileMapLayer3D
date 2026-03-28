@@ -1,0 +1,15 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://gsewxsppreqr"]
+
+[ext_resource type="Shader" uid="uid://cy0yugg1b3lcr" path="res://addons/TileMapLayer3D/shaders/edge_smooth.gdshader" id="1_nhxf6"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_nhxf6")
+shader_parameter/smooth_radius = 12.0
+shader_parameter/smooth_strength = 0.7
+shader_parameter/normal_threshold = 0.1
+shader_parameter/depth_threshold = 0.05
+shader_parameter/silhouette_cutoff = 1.5
+shader_parameter/ao_strength = 0.3
+shader_parameter/highlight_strength = 0.15
+shader_parameter/debug_show_edges = true

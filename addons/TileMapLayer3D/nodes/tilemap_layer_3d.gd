@@ -5,6 +5,7 @@ extends Node3D
 
 ## Custom container node for 2.5D tile placement using MultiMesh for performance
 
+@export var temp_test_smooth_material: ShaderMaterial = null
 
 @export_group("TileMapData")
 ## Settings Resource containing all per-node configuration
@@ -534,7 +535,16 @@ func _update_material() -> void:
 
 		# Apply pixel inset to both materials
 		_shared_material.set_shader_parameter("inset_value", pixel_inset_value)
+		
 		_shared_material_double_sided.set_shader_parameter("inset_value", pixel_inset_value)
+		
+		#TODO: #DEBUG # TEMP CODE
+		#TODO: #DEBUG # TEMP CODE
+		#TODO: #DEBUG # TEMP CODE
+
+		if temp_test_smooth_material:
+			_shared_material.next_pass = temp_test_smooth_material
+			_shared_material_double_sided.next_pass = temp_test_smooth_material
 
 		# Update material on all square chunks
 		for chunk in _quad_chunks:
@@ -794,6 +804,9 @@ func _get_or_create_chunk_in_region(
 		chunk.material_override = get_shared_material_double_sided()
 	else:
 		chunk.material_override = get_shared_material(false)
+
+		
+
 
 	chunk.cast_shadow = _chunk_shadow_casting
 	# PROPER SPATIAL CHUNKING (v0.4.2): Position chunk at region's world origin
