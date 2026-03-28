@@ -129,9 +129,11 @@ See: https://docs.godotengine.org/en/3.4/tutorials/2d/using_tilemaps.html
 <img width="360" height="120" alt="image" src="https://github.com/user-attachments/assets/1a20c0c1-dbe6-4551-be15-d51f7dde2c42" />
 
 - For TileMapLayer3D, you need a full 47 Tiles template with the 3x3 Format
+- You can watch this video that explains how to Define the correct Terrain Tiles for Auto-Tile and Paint Terrain Properties: See from minute 3:00 - https://youtu.be/LrsfgDyOAJs?si=vWavZWXs3REXc87E&t=181 
 - <img width="360" height="120" alt="image" src="https://github.com/user-attachments/assets/63e5e44e-fa73-4403-b5a3-9c51149aaa47" />
 - The best explanation for Auto-Tile Terrain creation is still in the Godot 3.4 docs (but works perfectly with 4.7+)
-See: https://docs.godotengine.org/en/3.4/tutorials/2d/using_tilemaps.html 
+See: https://docs.godotengine.org/en/3.4/tutorials/2d/using_tilemaps.html
+
 
 - Make sure you SAVE everything.
 
